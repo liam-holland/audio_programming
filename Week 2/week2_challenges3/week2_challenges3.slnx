@@ -1,0 +1,9 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="../sketch_challenges/sketch_challenges.vcxproj" Id="220eeb70-c76a-4b8b-8b5e-7210d4258719" />
+  <Project Path="../week2_challange3_4/week2_challange3_4.vcxproj" Id="fb8f99e4-584f-4467-bac3-532f16587826" />
+  <Project Path="week2_challenges3.vcxproj" Id="f95e187c-e48c-4509-9abb-750d30a204d5" />
+</Solution>

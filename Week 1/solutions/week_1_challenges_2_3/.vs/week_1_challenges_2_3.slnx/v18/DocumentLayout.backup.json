@@ -1,0 +1,61 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\Liam Holland\\OneDrive - University of Edinburgh\\Semester 2\\Audio Programming\\C\u002B\u002B\\Week 1\\solutions\\week_1_challenges_2_3\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{7B46FE32-87B6-46F8-90EC-9F6719B8E064}|..\\test\\test.vcxproj|C:\\Users\\Liam Holland\\OneDrive - University of Edinburgh\\Semester 2\\Audio Programming\\C\u002B\u002B\\Week 1\\solutions\\test\\test.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{15C0D49F-9462-4DA8-ADD4-5F6A05B270B1}|week_1_challenges_2_3.vcxproj|C:\\Users\\Liam Holland\\OneDrive - University of Edinburgh\\Semester 2\\Audio Programming\\C\u002B\u002B\\Week 1\\solutions\\week_1_challenges_2_3\\week_1_challenges_2_3.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{15C0D49F-9462-4DA8-ADD4-5F6A05B270B1}|week_1_challenges_2_3.vcxproj|solutionrelative:week_1_challenges_2_3.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "test.cpp",
+              "DocumentMoniker": "C:\\Users\\Liam Holland\\OneDrive - University of Edinburgh\\Semester 2\\Audio Programming\\C\u002B\u002B\\Week 1\\solutions\\test\\test.cpp",
+              "RelativeDocumentMoniker": "..\\test\\test.cpp",
+              "ToolTip": "C:\\Users\\Liam Holland\\OneDrive - University of Edinburgh\\Semester 2\\Audio Programming\\C\u002B\u002B\\Week 1\\solutions\\test\\test.cpp",
+              "RelativeToolTip": "..\\test\\test.cpp",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
+              "WhenOpened": "2026-01-21T14:33:14.041Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{1c4feeaa-4718-4aa9-859d-94ce25d182ba}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:128:0:{116d2292-e37d-41cd-a077-ebacac4c8cc4}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "week_1_challenges_2_3.cpp",
+              "DocumentMoniker": "C:\\Users\\Liam Holland\\OneDrive - University of Edinburgh\\Semester 2\\Audio Programming\\C\u002B\u002B\\Week 1\\solutions\\week_1_challenges_2_3\\week_1_challenges_2_3.cpp",
+              "RelativeDocumentMoniker": "week_1_challenges_2_3.cpp",
+              "ToolTip": "C:\\Users\\Liam Holland\\OneDrive - University of Edinburgh\\Semester 2\\Audio Programming\\C\u002B\u002B\\Week 1\\solutions\\week_1_challenges_2_3\\week_1_challenges_2_3.cpp",
+              "RelativeToolTip": "week_1_challenges_2_3.cpp",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAARAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
+              "WhenOpened": "2026-01-14T15:10:42.681Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

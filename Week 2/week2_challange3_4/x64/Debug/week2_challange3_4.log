@@ -1,0 +1,22 @@
+﻿  week2_challange3_4.cpp
+C:\Users\Liam Holland\OneDrive - University of Edinburgh\Semester 2\Audio Programming\C++\Week 2\week2_challange3_4\MattsAudioHeader.h(117,23): warning C4018: '<': signed/unsigned mismatch
+  (compiling source file 'week2_challange3_4.cpp')
+  
+C:\Users\Liam Holland\OneDrive - University of Edinburgh\Semester 2\Audio Programming\C++\Week 2\week2_challange3_4\MattsAudioHeader.h(122,33): warning C4244: '=': conversion from 'float' to 'int', possible loss of data
+  (compiling source file 'week2_challange3_4.cpp')
+  
+C:\Users\Liam Holland\OneDrive - University of Edinburgh\Semester 2\Audio Programming\C++\Week 2\week2_challange3_4\MattsAudioHeader.h(124,19): warning C4244: '=': conversion from 'const float' to 'int', possible loss of data
+  (compiling source file 'week2_challange3_4.cpp')
+  
+C:\Users\Liam Holland\OneDrive - University of Edinburgh\Semester 2\Audio Programming\C++\Week 2\week2_challange3_4\MattsAudioHeader.h(155,40): warning C4267: 'argument': conversion from 'size_t' to 'uint32_t', possible loss of data
+  (compiling source file 'week2_challange3_4.cpp')
+  
+C:\Users\Liam Holland\OneDrive - University of Edinburgh\Semester 2\Audio Programming\C++\Week 2\week2_challange3_4\week2_challange3_4.cpp(23,15): warning C4244: 'argument': conversion from 'time_t' to 'unsigned int', possible loss of data
+C:\Users\Liam Holland\OneDrive - University of Edinburgh\Semester 2\Audio Programming\C++\Week 2\week2_challange3_4\week2_challange3_4.cpp(25,17): warning C4305: 'initializing': truncation from 'double' to 'float'
+C:\Users\Liam Holland\OneDrive - University of Edinburgh\Semester 2\Audio Programming\C++\Week 2\week2_challange3_4\week2_challange3_4.cpp(35,80): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\Users\Liam Holland\OneDrive - University of Edinburgh\Semester 2\Audio Programming\C++\Week 2\week2_challange3_4\week2_challange3_4.cpp(38,66): warning C4244: '=': conversion from 'double' to '_Ty', possible loss of data
+C:\Users\Liam Holland\OneDrive - University of Edinburgh\Semester 2\Audio Programming\C++\Week 2\week2_challange3_4\week2_challange3_4.cpp(38,66): warning C4244:         with
+C:\Users\Liam Holland\OneDrive - University of Edinburgh\Semester 2\Audio Programming\C++\Week 2\week2_challange3_4\week2_challange3_4.cpp(38,66): warning C4244:         [
+C:\Users\Liam Holland\OneDrive - University of Edinburgh\Semester 2\Audio Programming\C++\Week 2\week2_challange3_4\week2_challange3_4.cpp(38,66): warning C4244:             _Ty=float
+C:\Users\Liam Holland\OneDrive - University of Edinburgh\Semester 2\Audio Programming\C++\Week 2\week2_challange3_4\week2_challange3_4.cpp(38,66): warning C4244:         ]
+  week2_challange3_4.vcxproj -> C:\Users\Liam Holland\OneDrive - University of Edinburgh\Semester 2\Audio Programming\C++\Week 2\week2_challenges3\x64\Debug\week2_challange3_4.exe

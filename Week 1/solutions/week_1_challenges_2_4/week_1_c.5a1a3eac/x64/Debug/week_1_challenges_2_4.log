@@ -1,0 +1,3 @@
+﻿  week_1_challenges_2_4.cpp
+C:\Users\Liam Holland\OneDrive - University of Edinburgh\Semester 2\Audio Programming\C++\Week 1\solutions\week_1_challenges_2_4\week_1_challenges_2_4.cpp(10,20): warning C4305: 'initializing': truncation from 'double' to 'float'
+  week_1_challenges_2_4.vcxproj -> C:\Users\Liam Holland\OneDrive - University of Edinburgh\Semester 2\Audio Programming\C++\Week 1\solutions\week_1_challenges_2_4\x64\Debug\week_1_challenges_2_4.exe

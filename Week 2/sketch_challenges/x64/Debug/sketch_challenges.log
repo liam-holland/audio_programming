@@ -1,0 +1,21 @@
+﻿  sketch_challenges.cpp
+C:\Users\Liam Holland\OneDrive - University of Edinburgh\Semester 2\Audio Programming\C++\Week 2\sketch_challenges\MattsAudioHeader.h(117,23): warning C4018: '<': signed/unsigned mismatch
+  (compiling source file 'sketch_challenges.cpp')
+  
+C:\Users\Liam Holland\OneDrive - University of Edinburgh\Semester 2\Audio Programming\C++\Week 2\sketch_challenges\MattsAudioHeader.h(122,33): warning C4244: '=': conversion from 'float' to 'int', possible loss of data
+  (compiling source file 'sketch_challenges.cpp')
+  
+C:\Users\Liam Holland\OneDrive - University of Edinburgh\Semester 2\Audio Programming\C++\Week 2\sketch_challenges\MattsAudioHeader.h(124,19): warning C4244: '=': conversion from 'const float' to 'int', possible loss of data
+  (compiling source file 'sketch_challenges.cpp')
+  
+C:\Users\Liam Holland\OneDrive - University of Edinburgh\Semester 2\Audio Programming\C++\Week 2\sketch_challenges\MattsAudioHeader.h(155,40): warning C4267: 'argument': conversion from 'size_t' to 'uint32_t', possible loss of data
+  (compiling source file 'sketch_challenges.cpp')
+  
+C:\Users\Liam Holland\OneDrive - University of Edinburgh\Semester 2\Audio Programming\C++\Week 2\sketch_challenges\sketch_challenges.cpp(166,15): warning C4244: 'argument': conversion from 'time_t' to 'unsigned int', possible loss of data
+C:\Users\Liam Holland\OneDrive - University of Edinburgh\Semester 2\Audio Programming\C++\Week 2\sketch_challenges\sketch_challenges.cpp(168,17): warning C4305: 'initializing': truncation from 'double' to 'float'
+C:\Users\Liam Holland\OneDrive - University of Edinburgh\Semester 2\Audio Programming\C++\Week 2\sketch_challenges\sketch_challenges.cpp(181,40): warning C4244: '=': conversion from 'double' to '_Ty', possible loss of data
+C:\Users\Liam Holland\OneDrive - University of Edinburgh\Semester 2\Audio Programming\C++\Week 2\sketch_challenges\sketch_challenges.cpp(181,40): warning C4244:         with
+C:\Users\Liam Holland\OneDrive - University of Edinburgh\Semester 2\Audio Programming\C++\Week 2\sketch_challenges\sketch_challenges.cpp(181,40): warning C4244:         [
+C:\Users\Liam Holland\OneDrive - University of Edinburgh\Semester 2\Audio Programming\C++\Week 2\sketch_challenges\sketch_challenges.cpp(181,40): warning C4244:             _Ty=float
+C:\Users\Liam Holland\OneDrive - University of Edinburgh\Semester 2\Audio Programming\C++\Week 2\sketch_challenges\sketch_challenges.cpp(181,40): warning C4244:         ]
+  sketch_challenges.vcxproj -> C:\Users\Liam Holland\OneDrive - University of Edinburgh\Semester 2\Audio Programming\C++\Week 2\week2_challenges3\x64\Debug\sketch_challenges.exe
