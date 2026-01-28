@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Add your executable (only .cpp files!)
 add_executable(CLion_challenges4
         main_challenge1.cpp
+        main_challenge2.cpp
 )
 
 # Link Windows Multimedia library for PlaySound
