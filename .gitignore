@@ -1,2 +1,7 @@
 *.ipch
 
+# CMake build directories
+cmake-build-*/
+
+# Compiled executables
+*.exe
