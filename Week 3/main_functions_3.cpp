@@ -4,10 +4,28 @@
 #include "MattsAudioHeader.h"       // for the writeWavFile function
 
 
-float clipDistortion(float inSample)
+float clipDistortion(float inSample, float threshold)
 {
+    
     float distortedSample = inSample; // a placeholder for our distortion process
+
+    if (distortedSample > threshold) 
+    {
+        distortedSample = threshold;        
+    }
+    else if (distortedSample < -threshold) 
+    {
+       distortedSample = -threshold; 
+    }
+    
     return distortedSample;           // return the result back to the main program that called the function
+}
+
+float tanDistortion(float inputSample, float inputGainValue)
+{
+    float scaledInput{ inputSample * inputGainValue };
+
+    return clipDistortion(tanhf(scaledInput),inputGainValue);
 }
 
 
@@ -18,6 +36,8 @@ int main(int argc, const char * argv[]) {
     float duration = 5.0f;
     float sampleRate = 44100;
     int durationInSamples = duration * sampleRate;
+
+    float gain{100.0};
 
     // set up a sine oscillator to test our distortion with
     float frequency = 220.0f;            // freq in Hz
@@ -38,7 +58,7 @@ int main(int argc, const char * argv[]) {
 
         // STEP 2:   APPLY DISTORTION
         // distort the sine sample and write it into the samples array
-        samples[i] = clipDistortion(sineSample);
+        samples[i] = tanDistortion(sineSample,gain);
 
 
         // STEP 3:   UPDATE PHASE

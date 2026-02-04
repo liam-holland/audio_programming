@@ -6,3 +6,8 @@ set(CMAKE_CXX_STANDARD 20)
 add_executable(functions1 main_functions_1.cpp)
 add_executable(functions2 main_functions2.cpp)
 add_executable(functions3 main_functions_3.cpp)
+add_executable(class1 main_classes_1.cpp)
+add_executable(class2 main_classes_2.cpp)
+add_executable(classOscillator main_oscillator.cpp)
+
+

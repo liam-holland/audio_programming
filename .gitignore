@@ -1,3 +1,4 @@
+# ipch (intellisence ) files
 *.ipch
 
 # CMake build directories
@@ -5,3 +6,4 @@ cmake-build-*/
 
 # Compiled executables
 *.exe
+/Week 3/questions
