@@ -7,3 +7,5 @@ cmake-build-*/
 # Compiled executables
 *.exe
 /Week 3/questions
+/assignment_2/assignment_2/Builds
+JuceLibraryCode

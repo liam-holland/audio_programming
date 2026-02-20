@@ -2,7 +2,7 @@
 #include "PluginEditor.h"
 
 //==============================================================================
-MyProjectAudioProcessor::MyProjectAudioProcessor()
+MyOscAudioProcessor::MyOscAudioProcessor()
      : AudioProcessor (BusesProperties()
                      #if ! JucePlugin_IsMidiEffect
                       #if ! JucePlugin_IsSynth
@@ -14,17 +14,17 @@ MyProjectAudioProcessor::MyProjectAudioProcessor()
 {
 }
 
-MyProjectAudioProcessor::~MyProjectAudioProcessor()
+MyOscAudioProcessor::~MyOscAudioProcessor()
 {
 }
 
 //==============================================================================
-const juce::String MyProjectAudioProcessor::getName() const
+const juce::String MyOscAudioProcessor::getName() const
 {
     return JucePlugin_Name;
 }
 
-bool MyProjectAudioProcessor::acceptsMidi() const
+bool MyOscAudioProcessor::acceptsMidi() const
 {
    #if JucePlugin_WantsMidiInput
     return true;
@@ -33,7 +33,7 @@ bool MyProjectAudioProcessor::acceptsMidi() const
    #endif
 }
 
-bool MyProjectAudioProcessor::producesMidi() const
+bool MyOscAudioProcessor::producesMidi() const
 {
    #if JucePlugin_ProducesMidiOutput
     return true;
@@ -42,7 +42,7 @@ bool MyProjectAudioProcessor::producesMidi() const
    #endif
 }
 
-bool MyProjectAudioProcessor::isMidiEffect() const
+bool MyOscAudioProcessor::isMidiEffect() const
 {
    #if JucePlugin_IsMidiEffect
     return true;
@@ -51,53 +51,58 @@ bool MyProjectAudioProcessor::isMidiEffect() const
    #endif
 }
 
-double MyProjectAudioProcessor::getTailLengthSeconds() const
+double MyOscAudioProcessor::getTailLengthSeconds() const
 {
     return 0.0;
 }
 
-int MyProjectAudioProcessor::getNumPrograms()
+int MyOscAudioProcessor::getNumPrograms()
 {
     return 1;   // NB: some hosts don't cope very well if you tell them there are 0 programs,
                 // so this should be at least 1, even if you're not really implementing programs.
 }
 
-int MyProjectAudioProcessor::getCurrentProgram()
+int MyOscAudioProcessor::getCurrentProgram()
 {
     return 0;
 }
 
-void MyProjectAudioProcessor::setCurrentProgram (int index)
+void MyOscAudioProcessor::setCurrentProgram (int index)
 {
     juce::ignoreUnused (index);
 }
 
-const juce::String MyProjectAudioProcessor::getProgramName (int index)
+const juce::String MyOscAudioProcessor::getProgramName (int index)
 {
     juce::ignoreUnused (index);
     return {};
 }
 
-void MyProjectAudioProcessor::changeProgramName (int index, const juce::String& newName)
+void MyOscAudioProcessor::changeProgramName (int index, const juce::String& newName)
 {
     juce::ignoreUnused (index, newName);
 }
 
 //==============================================================================
-void MyProjectAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
+void MyOscAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
     juce::ignoreUnused (sampleRate, samplesPerBlock);
+
+    osc.setSampleRate (sampleRate);
+    osc.setFrequency(440);
+    osc.setShape("sin");
+    osc.setAmplitude(0.1);
 }
 
-void MyProjectAudioProcessor::releaseResources()
+void MyOscAudioProcessor::releaseResources()
 {
     // When playback stops, you can use this as an opportunity to free up any
     // spare memory, etc.
 }
 
-bool MyProjectAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
+bool MyOscAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 {
   #if JucePlugin_IsMidiEffect
     juce::ignoreUnused (layouts);
@@ -121,7 +126,7 @@ bool MyProjectAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts
   #endif
 }
 
-void MyProjectAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
+void MyOscAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                                               juce::MidiBuffer& midiMessages)
 {
     juce::ignoreUnused (midiMessages);
@@ -147,24 +152,30 @@ void MyProjectAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     auto* rightChannel  {buffer.getWritePointer(1)};
 
     for (int i = 0; i < numSamples; ++i) {
-        leftChannel[i] = getGain() * ((random.nextFloat() * 2.0f) -1);
-        rightChannel[i] = getGain() * ((random.nextFloat() * 2.0f) -1);
+        // leftChannel[i] = getGain() * ((random.nextFloat() * 2.0f) -1);
+        // rightChannel[i] = getGain() * ((random.nextFloat() * 2.0f) -1);
+
+        float sample {osc.make()};
+        leftChannel[i] = sample;
+        rightChannel[i] = sample;
+
     }
+
 }
 
 //==============================================================================
-bool MyProjectAudioProcessor::hasEditor() const
+bool MyOscAudioProcessor::hasEditor() const
 {
     return true; // (change this to false if you choose to not supply an editor)
 }
 
-juce::AudioProcessorEditor* MyProjectAudioProcessor::createEditor()
+juce::AudioProcessorEditor* MyOscAudioProcessor::createEditor()
 {
     return new MyProjectAudioProcessorEditor (*this);
 }
 
 //==============================================================================
-void MyProjectAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
+void MyOscAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
     // You should use this method to store your parameters in the memory block.
     // You could do that either as raw data, or use the XML or ValueTree classes
@@ -172,7 +183,7 @@ void MyProjectAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
     juce::ignoreUnused (destData);
 }
 
-void MyProjectAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
+void MyOscAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
     // You should use this method to restore your parameters from this memory block,
     // whose contents will have been created by the getStateInformation() call.
@@ -183,5 +194,5 @@ void MyProjectAudioProcessor::setStateInformation (const void* data, int sizeInB
 // This creates new instances of the plugin..
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
-    return new MyProjectAudioProcessor();
+    return new MyOscAudioProcessor();
 }

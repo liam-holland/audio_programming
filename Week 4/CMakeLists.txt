@@ -16,6 +16,7 @@ cmake_minimum_required(VERSION 3.22)
 
 project(AUDIO_PLUGIN_EXAMPLE VERSION 0.0.1)
 
+
 # If you've installed JUCE somehow (via a package manager, or directly using the CMake install
 # target), you'll need to tell this project that it depends on the installed copy of JUCE. If you've
 # included JUCE directly in your source tree (perhaps as a submodule), you'll need to tell CMake to
@@ -76,7 +77,9 @@ target_sources(AudioPluginExample
         Source/PluginEditor.cpp
         Source/PluginProcessor.cpp
         Source/PluginProcessor.h
-        Source/PluginEditor.h)
+        Source/PluginEditor.h
+        Source/MattsAudioHeader.h
+        Source/Oscillator.h)
 
 # `target_compile_definitions` adds some preprocessor definitions to our target. In a Projucer
 # project, these might be passed in the 'Preprocessor Definitions' field. JUCE modules also make use
