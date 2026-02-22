@@ -8,6 +8,7 @@
 
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "Oscillator.h"
 
 //==============================================================================
 Assignment_2AudioProcessor::Assignment_2AudioProcessor()
@@ -38,7 +39,60 @@ void Assignment_2AudioProcessor::prepareToPlay(double sampleRate, int samplesPer
 
     juce::ignoreUnused(sampleRate, samplesPerBlock);
 
+    // Create the oscillators
 
+    Oscillator osc1(1, sampleRate, 0.0, 180.0, 440.0, "triangle", 1, "multiply", std::vector<int>{1, 2, 3});
+    Oscillator osc2(1, sampleRate, 3.0, 60.0, 200.0, "sin", 1, "multiply", std::vector<int>{1, 2, 3});
+    Oscillator osc3(1, sampleRate, 10.0, 6.0, 40.0, "sqaure", 1, "multiply", std::vector<int>{1, 2, 3});
+    Oscillator osc4(1, sampleRate, 14.0, 45.0, 80.0, "square", 1, "multiply", std::vector<int>{1, 2, 3});
+    Oscillator osc5(1, sampleRate, 12.0, 50.0, 70.0, "sin", 1, "multiply", std::vector<int>{1, 2, 3});
+    Oscillator osc6(1, sampleRate, 18.0, 22.0, 100.0, "sin", 1, "multiply", std::vector<int>{1, 2, 3});
+    Oscillator osc7(1, sampleRate, 6.0, 18.0, 250.0, "triangle", 1, "multiply", std::vector<int>{1, 2, 3});
+    Oscillator osc8(1, sampleRate, 7.0, 70.0, 200.0, "sin", 1, "multiply", std::vector<int>{1, 2, 3});
+    Oscillator osc9(1, sampleRate, 9.0, 12.0, 75.0, "square", 1, "multiply", std::vector<int>{1, 2, 3});
+    Oscillator osc10(1, sampleRate, 11.0, 100.0, 98.0, "sin", 1, "multiply", std::vector<int>{1, 2, 3});
+
+    // Store the oscillators
+    //oscillatorArray oscillatorList;
+
+    oscillatorList.clear();
+
+    oscillatorList.push_back(osc1);
+    oscillatorList.push_back(osc2);
+    oscillatorList.push_back(osc3);
+    oscillatorList.push_back(osc4);
+    oscillatorList.push_back(osc5);
+    oscillatorList.push_back(osc6);
+    oscillatorList.push_back(osc7);
+    oscillatorList.push_back(osc8);
+    oscillatorList.push_back(osc9);
+    oscillatorList.push_back(osc10);
+
+    // FILTER --------------------------------------------
+
+    // Create our filter coefficients
+    auto coeffs = juce::IIRCoefficients::makeLowPass(sampleRate, 250.0, 0.707);
+
+    leftFilter.setCoefficients(coeffs);
+    rightFilter.setCoefficients(coeffs);
+
+
+    // REVERB --------------------------------------------
+    
+
+    // Set sample rate
+    reverb.setSampleRate(sampleRate);
+
+    // Initial settings
+    reverbParameters.roomSize = 0.5f;   // 0.0 to 1.0
+    reverbParameters.damping = 0.5f;    // 0.0 to 1.0
+    reverbParameters.wetLevel = 0.33f;  // Volume of the reverb
+    reverbParameters.dryLevel = 0.4f;   // Volume of the original sound
+    reverbParameters.width = 1.0f;      // Stereo width
+
+    reverb.setParameters(reverbParameters);
+
+  
 }
 
 void Assignment_2AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
@@ -47,27 +101,75 @@ void Assignment_2AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
     auto totalNumInputChannels = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
 
-    // In case we have more outputs than inputs, this code clears any output
-    // channels that didn't contain input data, (because these aren't
-    // guaranteed to be empty - they may contain garbage).
-    // This is here to avoid people getting screaming feedback
-    // when they first compile a plugin, but obviously you don't need to keep
-    // this code if your algorithm always overwrites all the output channels.
-    for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
-        buffer.clear(i, 0, buffer.getNumSamples());
+    //// In case we have more outputs than inputs, this code clears any output
+    //// channels that didn't contain input data, (because these aren't
+    //// guaranteed to be empty - they may contain garbage).
+    //// This is here to avoid people getting screaming feedback
+    //// when they first compile a plugin, but obviously you don't need to keep
+    //// this code if your algorithm always overwrites all the output channels.
+    //for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
+    //    buffer.clear(i, 0, buffer.getNumSamples());
 
     // This is the place where you'd normally do the guts of your plugin's
     // audio processing...
-    // Make sure to reset the state if your inner loop is processing
-    // the samples and the outer loop is handling the channels.
-    // Alternatively, you can process the samples with the channels
-    // interleaved by keeping the same state.
-    for (int channel = 0; channel < totalNumInputChannels; ++channel)
-    {
-        auto* channelData = buffer.getWritePointer(channel);
 
-        // ..do something to the data...
+    int numSamples{ buffer.getNumSamples() };
+    auto* leftChannel{ buffer.getWritePointer(0) };
+    auto* rightChannel{ buffer.getWritePointer(1) };
+
+
+    for (int i = 0; i < numSamples; i++) {
+        // leftChannel[i] = getGain() * ((random.nextFloat() * 2.0f) -1);
+        // rightChannel[i] = getGain() * ((random.nextFloat() * 2.0f) -1);
+
+        //If adding, this needs to be zero
+        // If multiplying, needs to be greater than zero
+        float sample{ 0.9 };
+
+
+        for ( int o = 0; o < oscillatorList.size() ; o++)
+        {
+
+
+
+            if ( !oscillatorList[o].getActive() && ( totalSamplesProcessed >= oscillatorList[o].getStartSample() ) )
+            {
+                oscillatorList[o].setActive( true ); // turn it on
+            }
+
+            if ( oscillatorList[o].getActive() && ( totalSamplesProcessed >= oscillatorList[o].getLastSample() ) )
+            {
+                oscillatorList[o].setActive( false ); // turn it off
+            }
+
+            if (oscillatorList[o].getActive())
+            {
+                sample *= oscillatorList[o].make();
+            }
+
+
+        }   
+        
+        leftChannel[i] = sample; // / (2*oscillatorList.size());
+        rightChannel[i] = sample; // / (2*oscillatorList.size());
+
     }
+
+    // Apply the filters to the samples
+
+    leftFilter.processSamples(leftChannel, numSamples);
+    rightFilter.processSamples(rightChannel, numSamples);
+
+
+    // Apply the reverb to the samples
+
+    reverb.processStereo(leftChannel, rightChannel, numSamples);
+
+
+    // 
+
+    totalSamplesProcessed += numSamples;
+
 }
 
 
@@ -168,34 +270,6 @@ bool Assignment_2AudioProcessor::isBusesLayoutSupported (const BusesLayout& layo
 }
 #endif
 
-void Assignment_2AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
-{
-    juce::ScopedNoDenormals noDenormals;
-    auto totalNumInputChannels  = getTotalNumInputChannels();
-    auto totalNumOutputChannels = getTotalNumOutputChannels();
-
-    // In case we have more outputs than inputs, this code clears any output
-    // channels that didn't contain input data, (because these aren't
-    // guaranteed to be empty - they may contain garbage).
-    // This is here to avoid people getting screaming feedback
-    // when they first compile a plugin, but obviously you don't need to keep
-    // this code if your algorithm always overwrites all the output channels.
-    for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
-        buffer.clear (i, 0, buffer.getNumSamples());
-
-    // This is the place where you'd normally do the guts of your plugin's
-    // audio processing...
-    // Make sure to reset the state if your inner loop is processing
-    // the samples and the outer loop is handling the channels.
-    // Alternatively, you can process the samples with the channels
-    // interleaved by keeping the same state.
-    for (int channel = 0; channel < totalNumInputChannels; ++channel)
-    {
-        auto* channelData = buffer.getWritePointer (channel);
-
-        // ..do something to the data...
-    }
-}
 
 //==============================================================================
 bool Assignment_2AudioProcessor::hasEditor() const
