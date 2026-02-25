@@ -9,48 +9,200 @@
 #pragma once
 
 
+class Envelope
+{
+private:
+    float sampleRate{};
+    float attack{};
+    float decay{};
+    float sustain{};
+    float release{};
+
+    float start{};
+    float duration{};
+
+    int attackStart{ 0 };
+    int attackEnd{ 0 };
+
+    int decayStart{ 0 };
+    int decayEnd{ 0 };
+
+    int sustainStart{ 0 };
+    int sustainEnd{ 0 };
+
+    int releaseStart{ 0 };
+    int releaseEnd{ 0 };
+
+    //0-1, 1 - 0.8 , 0.8 - 0.8, 0.8 - 0
+    float attackDelta{ 0.0 };
+    float decayDelta{ 0.0 };
+    float sustainDelta{ 0.0 };
+    float releaseDelta{ 0.0 };
+
+    float envAmplitude{ 0.0 };
+    float delta{ 0.0 };
+
+
+public:
+
+    // Set the default behaviour
+    Envelope() : sampleRate(48000),
+        attack(0.01f),
+        decay(0.1f),
+        sustain(0.8f),
+        release(0.2f)
+    { 
+        setEnvelopeParameters();
+    }
+
+    explicit Envelope(int _sampleRate_, float _attack_, float _decay_, float _sustainLevel_, float _release_)
+    {
+        setSampleRate(_sampleRate_);
+        setAttack(_attack_);
+        setDecay(_decay_);
+        setSustain(_sustainLevel_);
+        setRelease(_release_);
+
+        setEnvelopeParameters();
+    }
+
+    void setSampleRate(int _sampleRate)
+    {
+        sampleRate = _sampleRate;
+        setEnvelopeParameters();
+    }
+
+    void setAttack(float _attack)
+    {
+        attack = _attack;
+        setEnvelopeParameters();
+    }
+
+    void setDecay(float _decay)
+    {
+        decay = _decay;
+        setEnvelopeParameters();
+    }
+
+    void setSustain(float _sustain)
+    {
+        sustain = _sustain;
+        setEnvelopeParameters();
+    }
+
+    void setRelease(float _release)
+    {
+        release = _release;
+        setEnvelopeParameters();
+    }
+
+
+    void setAttackStart(int _attackStart)
+    {
+        attackStart = _attackStart;
+        setEnvelopeParameters();
+    }
+
+    void setSustainEnd(int _sustainEnd)
+    {
+        sustainEnd = _sustainEnd;
+        setEnvelopeParameters();
+    }
+
+
+    void setEnvelopeParameters()
+    {
+        /*attackStart =  0 ;*/
+        attackEnd = attackStart + static_cast<int>(sampleRate * attack);
+
+        decayStart = attackEnd + 1;
+        decayEnd = decayStart + static_cast<int>(sampleRate * decay);
+
+        sustainStart = decayEnd + 1;
+        //sustainEnd = sustainStart + static_cast<int>(sampleRate * (start + duration)) ;
+
+        releaseStart = sustainEnd + 1;
+        releaseEnd = releaseStart + static_cast<int>(sampleRate * release);
+
+        //0-1, 1 - 0.8 , 0.8 - 0.8, 0.8 - 0
+        attackDelta = 1.0 / (attackEnd - attackStart);
+        decayDelta = - (1.0 - sustain) / (decayEnd - decayStart);
+        sustainDelta = 0.0;
+        releaseDelta = -0.8 / (releaseEnd - releaseStart);
+    }
+
+    int getReleaseEnd()
+    {
+        return releaseEnd;
+    }
+
+    float processEnvelope(int _sample)
+    {
+        // Attack Phase (0.0 to 1.0)
+        if (_sample >= attackStart && _sample < attackEnd) {
+            float progress = static_cast<float>(_sample - attackStart) / (attackEnd - attackStart);
+            envAmplitude = progress; // Directly interpolate from 0 to 1
+        }
+        // Decay Phase (1.0 to 0.8)
+        else if (_sample >= decayStart && _sample < decayEnd) {
+            float progress = static_cast<float>(_sample - decayStart) / (decayEnd - decayStart);
+            // 1.0 down to 0.8
+            envAmplitude = 1.0f - (( 1 - sustain) * progress);
+        }
+        // Sustain Phase (Hold at 0.8)
+        else if (_sample >= sustainStart && _sample < sustainEnd) {
+            envAmplitude = 0.8f;
+        }
+        // Release Phase (0.8 to 0.0)
+        else if (_sample >= releaseStart && _sample < releaseEnd) {
+            float progress = static_cast<float>(_sample - releaseStart) / (releaseEnd - releaseStart);
+            // Lerp from 0.8 down to 0.0
+            envAmplitude = 0.8f - (sustain * progress);
+        }
+        // Note is fully finished
+        else {
+            envAmplitude = 0.0f;
+        }
+
+        return envAmplitude;
+    }
+
+};
+
+
+
+
 class Oscillator
 {
 public:
 
     /**
-     * @param _oscID_ Set the ID of the oscillator (must be intergers)  
      * @param _sampleRate_ Set the sample rate of the oscillator
      * @param _start_ Set the start time of the oscillator
      * @param _duration_ The length of time in seconds that the oscillator is on for
      * @param _frequency_ Set the frequency of the oscillator
      * @param _chooseShape_ Choose the shape of the oscillator
      * @param _amplitude_ Set the amplitude of the oscillator (between 0 - 1)
-     * @param _addSubtractMultiply Choose how the oscillator effects other oscillators
-     * @param _oscRange_ Which oscillators to apply it to
      */
 
     explicit Oscillator
     (   
-          int _oscID_
-        , int _sampleRate_
+          int _sampleRate_
         , float _start_
         , float _duration_
         , float _frequency_
         , std::string _chooseShape_
         , float _amplitude_
-        , std::string _addSubtractMultiply_
-        , std::vector<int> _oscRange_
-
-
     )
 
     {
         setSampleRate(_sampleRate_);
 
-        setOscID(_oscID_);
         setStart(_start_);
         setDuration(_duration_);
         setFrequency(_frequency_);
         setShape(_chooseShape_);
         setAmplitude(_amplitude_);
-        setAddSubtractMultiply(_addSubtractMultiply_);
-        setOscRange(_oscRange_);
         
         setPhaseDelta();
         setStartSample();
@@ -152,29 +304,6 @@ public:
         return shape;
     }
 
-    // Add, subtract, multiply --------------------------------
-
-    void setAddSubtractMultiply(std::string _addSubtractMultiply)
-    {
-        addSubtractMultiply = _addSubtractMultiply;
-    }
-
-    std::string getAddSubtractMultiply()
-    {
-        return addSubtractMultiply;
-    }
-
-    // Osc range ----------------------------------
-
-    void setOscRange(std::vector<int> _oscRange)
-    {
-        oscRange = _oscRange;
-    }
-
-    std::vector<int> getOscRange()
-    {
-        return oscRange;
-    }
 
     // We now move to variables that car cacluated from our initialiation
 
@@ -202,27 +331,26 @@ public:
 
     //Active or not
 
-    void setActive( bool _isActive , int _sample )
-    {
+    //void setActive()
+    //{
+    //    
 
-        if ( getActive() != true && _sample >= getStartSample() )
-        {
-            isActive = true;
-        }
+    //    if ( getActive() != true && currentSample >= getStartSample() )
+    //    {
+    //        isActive = true;
+    //    }
 
-        if (getActive() == true && _sample >= envelope.getReleaseEnd() )
-        {
-            isActive = false;
-        }
+    //    if (getActive() == true && currentSample >= envelope.getReleaseEnd() )
+    //    {
+    //        isActive = false;
+    //    }
 
+    //}
 
-        //isActive = _isActive;
-    }
-
-    bool getActive()
-    {
-        return isActive;
-    }
+    //bool getActive()
+    //{
+    //    return isActive;
+    //}
 
 
     // Phase and phase delta
@@ -245,8 +373,9 @@ public:
     // Process the oscillators
 
 
-    auto process()
+    float process()
     {
+        
 
         if (shape == "sin")
         {
@@ -276,7 +405,7 @@ public:
 
     void setEnvelope(int _sampleRate_, float _attack_, float _decay_, float _sustain_, float _release_)
     {
-        Envelope envelope(_sampleRate_, _attack_, _decay_, _sustain_, _release_);
+        envelope = Envelope(_sampleRate_, _attack_, _decay_, _sustain_, _release_);
         envelope.setAttackStart(getStartSample());
         envelope.setSustainEnd(getLastSample());
 
@@ -287,18 +416,19 @@ public:
         currentSample ++;
     }
 
-    auto make()
+    float make()
     {
-
         setCurrentSample();
+        //setActive();
 
-        float env = envelope.processEnvelope(currentSample);
-
-        
-        if (isActive)
+        env = envelope.processEnvelope(currentSample);
+                
+        if (env > 0.0f)
             output = process() * env;
         else
-            output = 0;
+            output = 0.0f;
+
+        return output;
 
     }
 
@@ -413,170 +543,11 @@ private:
 
     Envelope envelope;
 
+    float env{ 0 };
+
     int currentSample{ 0 };
 
     float output{ 0 };
-
-};
-
-
-class Envelope
-{
-private:
-    float sampleRate{};
-    float attack{};
-    float decay{};
-    float sustain{};
-    float release{};
-    
-    float start{};
-    float duration{};
-
-    int attackStart{ 0 };
-    int attackEnd{ 0};
-
-    int decayStart{ 0 };
-    int decayEnd{ 0};
-
-    int sustainStart{ 0};
-    int sustainEnd{ 0 };
-
-    int releaseStart{ 0};
-    int releaseEnd{ 0 };
-
-    //0-1, 1 - 0.8 , 0.8 - 0.8, 0.8 - 0
-    float attackDelta{ 0.0 };
-    float decayDelta{ 0.0 };
-    float sustainDelta{ 0.0 };
-    float releaseDelta{ 0.0 };
-
-    float envAmplitude{ 0.0 };
-    float delta{ 0.0 };
-
-
-public:
-    explicit Envelope(int _sampleRate_, float _attack_, float _decay_, float _sustain_, float _release_)
-    {
-        setSampleRate(_sampleRate_);
-        setAttack(_attack_);
-        setDecay(_decay_);
-        setSustain(_sustain_);
-        setRelease(_release_);
-
-        setEnvelopeParameters();
-    }
-
-    void setSampleRate(int _sampleRate)
-    {
-        sampleRate = _sampleRate;
-        setEnvelopeParameters();
-    }
-
-    void setAttack(float _attack)
-    {
-        attack = _attack;
-        setEnvelopeParameters();
-    }
-
-    void setDecay(float _decay)
-    {
-        decay = _decay;
-        setEnvelopeParameters();
-    }
-
-    void setSustain(float _sustain)
-    {
-        sustain = _sustain;
-        setEnvelopeParameters();
-    }
-
-    void setRelease(float _release)
-    {
-        release = _release;
-        setEnvelopeParameters();
-    }
-
-    //void setStart(float _start)
-    //{
-    //    start = _start;
-    //    setEnvelopeParameters();
-    //}
-
-    //void setDuration(float _duration)
-    //{
-    //    duration = _duration;
-    //    setEnvelopeParameters();
-    //}
-
-    void setAttackStart( int _attackStart)
-    {
-        attackStart = _attackStart;
-        setEnvelopeParameters();
-    }
-
-    void setSustainEnd(int _sustainEnd)
-    {
-        sustainEnd = _sustainEnd;
-        setEnvelopeParameters();
-    }
-
-
-    void setEnvelopeParameters()
-    {
-        /*attackStart =  0 ;*/
-        attackEnd =  attackStart + static_cast<int>(sampleRate * attack) ;
-
-        decayStart = attackEnd + 1 ;
-        decayEnd = decayStart + static_cast<int>(sampleRate * decay) ;
-
-        sustainStart = decayEnd + 1 ;
-        //sustainEnd = sustainStart + static_cast<int>(sampleRate * (start + duration)) ;
-
-        releaseStart = sustainEnd + 1 ;
-        releaseEnd = releaseStart + static_cast<int>(sampleRate * release) ;
-
-        //0-1, 1 - 0.8 , 0.8 - 0.8, 0.8 - 0
-        attackDelta =  1.0 / (attackEnd - attackStart) ;
-        decayDelta = -0.2 / (decayEnd - decayStart) ;
-        sustainDelta = 0.0 ;
-        releaseDelta =  -0.8 / (releaseEnd - releaseStart) ;
-    }
-
-    int getReleaseEnd()
-    {
-        return releaseEnd;
-    }
-
-    float processEnvelope(int _sample)
-    {
-        // Attack Phase (0.0 to 1.0)
-        if (_sample >= attackStart && _sample < attackEnd) {
-            float progress = static_cast<float>(_sample - attackStart) / (attackEnd - attackStart);
-            envAmplitude = progress; // Directly interpolate from 0 to 1
-        }
-        // Decay Phase (1.0 to 0.8)
-        else if (_sample >= decayStart && _sample < decayEnd) {
-            float progress = static_cast<float>(_sample - decayStart) / (decayEnd - decayStart);
-            // 1.0 down to 0.8
-            envAmplitude = 1.0f - (0.2f * progress);
-        }
-        // Sustain Phase (Hold at 0.8)
-        else if (_sample >= sustainStart && _sample < sustainEnd) {
-            envAmplitude = 0.8f;
-        }
-        // Release Phase (0.8 to 0.0)
-        else if (_sample >= releaseStart && _sample < releaseEnd) {
-            float progress = static_cast<float>(_sample - releaseStart) / (releaseEnd - releaseStart);
-            // Lerp from 0.8 down to 0.0
-            envAmplitude = 0.8f - (0.8f * progress);
-        }
-        // Note is fully finished
-        else {
-            envAmplitude = 0.0f;
-        }
-
-        return envAmplitude;
-    }
 
 };
 

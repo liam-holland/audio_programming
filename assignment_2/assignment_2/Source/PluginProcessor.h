@@ -59,11 +59,16 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Assignment_2AudioProcessor)
     
     juce::Random random;
+    
     std::vector<Oscillator> oscillatorList;
+    std::vector<Oscillator> modulatorList;
+
     int totalSamplesProcessed = 0;
     juce::IIRFilter leftFilter;
     juce::IIRFilter rightFilter;
 
     juce::Reverb reverb;
     juce::Reverb::Parameters reverbParameters;
+
+    float mix{ 0 };
 };

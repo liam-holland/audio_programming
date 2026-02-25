@@ -39,47 +39,52 @@ void Assignment_2AudioProcessor::prepareToPlay(double sampleRate, int samplesPer
 
     juce::ignoreUnused(sampleRate, samplesPerBlock);
 
-    // Create the oscillators
+    //Set start to 0 and end to 3 minutes (180 seconds)
+    float startTime{ 0.0 };
+    float endTime{ 180.0 };
 
-    Oscillator osc1(1, sampleRate, 0.0, 10.0, 440.0, "saw", 1, "multiply", std::vector<int>{1, 2, 3});
-    //Oscillator osc2(1, sampleRate, 0.0, 60.0, 550.0, "saw", 1, "multiply", std::vector<int>{1, 2, 3});
-    //Oscillator osc3(1, sampleRate, 0.0, 60.0, 660.0, "saw", 1, "multiply", std::vector<int>{1, 2, 3});
-    //Oscillator osc4(1, sampleRate, 14.0, 45.0, 80.0, "pink", 0.2, "multiply", std::vector<int>{1, 2, 3});
-    //Oscillator osc5(1, sampleRate, 12.0, 50.0, 70.0, "white", 0.4, "multiply", std::vector<int>{1, 2, 3});
-    //Oscillator osc6(1, sampleRate, 18.0, 22.0, 100.0, "sin", 1, "multiply", std::vector<int>{1, 2, 3});
-    //Oscillator osc7(1, sampleRate, 6.0, 18.0, 250.0, "triangle", 1, "multiply", std::vector<int>{1, 2, 3});
-    //Oscillator osc8(1, sampleRate, 7.0, 70.0, 200.0, "sin", 1, "multiply", std::vector<int>{1, 2, 3});
-    //Oscillator osc9(1, sampleRate, 9.0, 12.0, 75.0, "square", 1, "multiply", std::vector<int>{1, 2, 3});
-    //Oscillator osc10(1, sampleRate, 11.0, 100.0, 98.0, "sin", 1, "multiply", std::vector<int>{1, 2, 3});
-
-    // Store the oscillators
-    //oscillatorArray oscillatorList;
+    // Create the musical oscillators
 
     oscillatorList.clear();
 
+    Oscillator osc1(sampleRate, 0.0, 20.0, 100, "saw", 1);
+    osc1.setEnvelope(sampleRate, 5, 0.1, 0.9, 5);
     oscillatorList.push_back(osc1);
-    //oscillatorList.push_back(osc2);
-    //oscillatorList.push_back(osc3);
-    //oscillatorList.push_back(osc4);
-    //oscillatorList.push_back(osc5);
-    //oscillatorList.push_back(osc6);
-    //oscillatorList.push_back(osc7);
-    //oscillatorList.push_back(osc8);
-    //oscillatorList.push_back(osc9);
-    //oscillatorList.push_back(osc10);
+
+
+    Oscillator osc2(sampleRate, 4.0, 20.0, 102.0, "square", 1);
+    osc2.setEnvelope(sampleRate, 1, 0.1, 0.8, 5);
+    oscillatorList.push_back(osc2);
+
+
+    Oscillator osc3(sampleRate, 2.0, 20.0, 99, "triangle", 1);
+    osc3.setEnvelope(sampleRate, 3, 0.4, 0.5, 3);
+    oscillatorList.push_back(osc3);
+
+
+    Oscillator osc4(sampleRate, 4.0, 22.0, 99, "pink", 0.4);
+    osc4.setEnvelope(sampleRate, 3, 0.4, 0.6, 3);
+    oscillatorList.push_back(osc4);
+
+    // Create modulation oscillators
+
+    Oscillator modOsc1(sampleRate, startTime, endTime, 6 , "sin", 1);
+    modOsc1.setEnvelope(sampleRate, 0.001, 0.001, 0.999, 0.001);
+    modulatorList.push_back(modOsc1);
+
 
     // FILTER --------------------------------------------
 
     // Create our filter coefficients
-    auto coeffs = juce::IIRCoefficients::makeLowPass(sampleRate, 300.0, 0.707);
+    //auto coeffsLeft = juce::IIRCoefficients::makeLowPass(sampleRate, 120.0, 1.1);
+    //auto coeffsRight = juce::IIRCoefficients::makeLowPass(sampleRate, 60.0, 4);
 
-    leftFilter.setCoefficients(coeffs);
-    rightFilter.setCoefficients(coeffs);
+    //leftFilter.setCoefficients(coeffsLeft);
+    //rightFilter.setCoefficients(coeffsRight);
 
 
     // REVERB --------------------------------------------
     
-
     // Set sample rate
     reverb.setSampleRate(sampleRate);
 
@@ -92,9 +97,7 @@ void Assignment_2AudioProcessor::prepareToPlay(double sampleRate, int samplesPer
 
     reverb.setParameters(reverbParameters);
 
-    // ENVELOPES ----------------
 
-  
 }
 
 void Assignment_2AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
@@ -115,67 +118,63 @@ void Assignment_2AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
     // This is the place where you'd normally do the guts of your plugin's
     // audio processing...
 
+    // -------------------------------------------//
+    // START TINKERING FROM HERE
+    // -------------------------------------------//
+
     int numSamples{ buffer.getNumSamples() };
     auto* leftChannel{ buffer.getWritePointer(0) };
     auto* rightChannel{ buffer.getWritePointer(1) };
 
-    Envelope env1(getSampleRate(), 5, 0.05, 0.5, 5);
-
+    
 
     for (int i = 0; i < numSamples; i++) {
 
-
-        //If adding, this needs to be zero
-        // If multiplying, needs to be greater than zero
-        float sample{ 0 };
-
+        mix = 0;
 
         for ( int o = 0; o < oscillatorList.size() ; o++)
         {
 
-            oscillatorList[0].make();
+            mix += oscillatorList[o].make();
 
-            //if ( !oscillatorList[o].getActive() && ( totalSamplesProcessed >= oscillatorList[o].getStartSample() ) )
-            //{
-            //    oscillatorList[o].setActive( true ); // turn it on
-            //}
+        }
 
-            //if ( oscillatorList[o].getActive() && ( totalSamplesProcessed >= oscillatorList[o].getLastSample() ) )
-            //{
-            //    oscillatorList[o].setActive( false ); // turn it off
-            //}
+        mix = mix / (2 * oscillatorList.size());
 
-            //if (oscillatorList[o].getActive())
-            //{
-            //    sample += oscillatorList[o].process();
-            //}
-
-        }   
-
-        sample = sample * env1.processEnvelope(totalSamplesProcessed);
-        
-        // If adding then need to divide  by number of oscillators. Omit this if multiplying
-        leftChannel[i] = sample  / (2*oscillatorList.size());
-        rightChannel[i] = sample  / (2*oscillatorList.size());
-
+        // Add one to the number of samples processed
         totalSamplesProcessed++;
 
+
+        // FILTER --------------------------------------------
+
+        float mod1Floor = 500;
+        float mod1Base = 50;
+        float mod1Middle = (mod1Floor + mod1Base) / 2.0;
+        float mod1Diff = (mod1Floor - mod1Base) / 2.0;
+
+        float mod1{ mod1Diff * (modulatorList[0].make()) + mod1Middle };
+
+        // Create our filter coefficients
+        auto coeffsLeft = juce::IIRCoefficients::makeLowPass(getSampleRate(), mod1 , 1.1);
+        auto coeffsRight = juce::IIRCoefficients::makeLowPass(getSampleRate(), mod1 , 4);
+
+        leftFilter.setCoefficients(coeffsLeft);
+        rightFilter.setCoefficients(coeffsRight);
+
+        float filteredleft = leftFilter.processSingleSampleRaw(mix);
+        float filteredright = rightFilter.processSingleSampleRaw(mix);
+
+
+        leftChannel[i] = filteredleft;
+        rightChannel[i] = filteredright;
+
     }
-
-    // Apply the filters to the samples
-
-    //leftFilter.processSamples(leftChannel, numSamples);
-    //rightFilter.processSamples(rightChannel, numSamples);
 
 
     // Apply the reverb to the samples
 
-    //reverb.processStereo(leftChannel, rightChannel, numSamples);
+    reverb.processStereo(leftChannel, rightChannel, numSamples);
 
-
-    // 
-
-    //totalSamplesProcessed += numSamples;
 
 }
 
