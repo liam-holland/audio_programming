@@ -4,6 +4,7 @@
 #include <iostream>
 #include <cmath>
 #include <vector>
+#include <JuceHeader.h>
 
 #pragma once
 
@@ -36,10 +37,10 @@ public:
         , std::string _addSubtractMultiply_
         , std::vector<int> _oscRange_
 
+
     )
 
     {
-
         setSampleRate(_sampleRate_);
 
         setOscID(_oscID_);
@@ -201,16 +202,27 @@ public:
 
     //Active or not
 
-    void setActive( bool _isActive )
+    void setActive( bool _isActive , int _sample )
     {
-        isActive = _isActive;
+
+        if ( getActive() != true && _sample >= getStartSample() )
+        {
+            isActive = true;
+        }
+
+        if (getActive() == true && _sample >= envelope.getReleaseEnd() )
+        {
+            isActive = false;
+        }
+
+
+        //isActive = _isActive;
     }
 
     bool getActive()
     {
         return isActive;
     }
-
 
 
     // Phase and phase delta
@@ -233,7 +245,7 @@ public:
     // Process the oscillators
 
 
-    auto make()
+    auto process()
     {
 
         if (shape == "sin")
@@ -248,6 +260,46 @@ public:
         {
             return processTriangle();
         }
+        else if (shape == "saw")
+        {
+            return processSaw();
+        }
+        else if (shape == "white")
+        {
+            return processWhite();
+        }
+        else if (shape == "pink")
+        {
+            return processPink();
+        }
+    }
+
+    void setEnvelope(int _sampleRate_, float _attack_, float _decay_, float _sustain_, float _release_)
+    {
+        Envelope envelope(_sampleRate_, _attack_, _decay_, _sustain_, _release_);
+        envelope.setAttackStart(getStartSample());
+        envelope.setSustainEnd(getLastSample());
+
+    }
+
+    void setCurrentSample()
+    {
+        currentSample ++;
+    }
+
+    auto make()
+    {
+
+        setCurrentSample();
+
+        float env = envelope.processEnvelope(currentSample);
+
+        
+        if (isActive)
+            output = process() * env;
+        else
+            output = 0;
+
     }
 
 
@@ -285,6 +337,51 @@ public:
         return amplitude*sampleValue;
     }
 
+    float processSaw()
+    {
+        phaseIncrement();
+
+        sampleValue = phase;
+        return amplitude * sampleValue;
+    }
+
+    float processWhite()
+    {
+        sampleValue = ((random.nextFloat() * 2.0f) - 1);
+        return amplitude * sampleValue;
+    }
+
+    float processPink()
+    {
+        float white{ processWhite() };
+
+        //Filter to make pink noise from white(updated March 2000)
+        //    ------------------------------------
+
+        //This is an approximation to a - 10dB / decade filter using a weighted sum
+        //of first order filters.It is accurate to within + / -0.05dB above 9.2Hz
+        //(44100Hz sampling rate).Unity gain is at Nyquist, but can be adjusted
+        //by scaling the numbers at the end of each line.
+
+        //If 'white' consists of uniform random numbers, such as those generated
+        //by the rand() function, 'pink' will have an almost gaussian level
+        //distribution.
+
+        // Written by paul.kellett@maxim.abel.co.uk
+
+        b0 = 0.99886 * b0 + white * 0.0555179;
+        b1 = 0.99332 * b1 + white * 0.0750759;
+        b2 = 0.96900 * b2 + white * 0.1538520;
+        b3 = 0.86650 * b3 + white * 0.3104856;
+        b4 = 0.55000 * b4 + white * 0.5329522;
+        b5 = -0.7616 * b5 - white * 0.0168980;
+        b6 = white * 0.115926;
+        float pink = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
+
+        return pink;
+        
+    }
+
 
 private:
     int oscID{};
@@ -304,7 +401,182 @@ private:
     float sampleValue{};
 
     bool isActive{ false };
+    juce::Random random;
+
+    float b0{ 0 };
+    float b1{ 0 };
+    float b2{ 0 };
+    float b3{ 0 };
+    float b4{ 0 };
+    float b5{ 0 };
+    float b6{ 0 };
+
+    Envelope envelope;
+
+    int currentSample{ 0 };
+
+    float output{ 0 };
+
+};
+
+
+class Envelope
+{
+private:
+    float sampleRate{};
+    float attack{};
+    float decay{};
+    float sustain{};
+    float release{};
     
+    float start{};
+    float duration{};
+
+    int attackStart{ 0 };
+    int attackEnd{ 0};
+
+    int decayStart{ 0 };
+    int decayEnd{ 0};
+
+    int sustainStart{ 0};
+    int sustainEnd{ 0 };
+
+    int releaseStart{ 0};
+    int releaseEnd{ 0 };
+
+    //0-1, 1 - 0.8 , 0.8 - 0.8, 0.8 - 0
+    float attackDelta{ 0.0 };
+    float decayDelta{ 0.0 };
+    float sustainDelta{ 0.0 };
+    float releaseDelta{ 0.0 };
+
+    float envAmplitude{ 0.0 };
+    float delta{ 0.0 };
+
+
+public:
+    explicit Envelope(int _sampleRate_, float _attack_, float _decay_, float _sustain_, float _release_)
+    {
+        setSampleRate(_sampleRate_);
+        setAttack(_attack_);
+        setDecay(_decay_);
+        setSustain(_sustain_);
+        setRelease(_release_);
+
+        setEnvelopeParameters();
+    }
+
+    void setSampleRate(int _sampleRate)
+    {
+        sampleRate = _sampleRate;
+        setEnvelopeParameters();
+    }
+
+    void setAttack(float _attack)
+    {
+        attack = _attack;
+        setEnvelopeParameters();
+    }
+
+    void setDecay(float _decay)
+    {
+        decay = _decay;
+        setEnvelopeParameters();
+    }
+
+    void setSustain(float _sustain)
+    {
+        sustain = _sustain;
+        setEnvelopeParameters();
+    }
+
+    void setRelease(float _release)
+    {
+        release = _release;
+        setEnvelopeParameters();
+    }
+
+    //void setStart(float _start)
+    //{
+    //    start = _start;
+    //    setEnvelopeParameters();
+    //}
+
+    //void setDuration(float _duration)
+    //{
+    //    duration = _duration;
+    //    setEnvelopeParameters();
+    //}
+
+    void setAttackStart( int _attackStart)
+    {
+        attackStart = _attackStart;
+        setEnvelopeParameters();
+    }
+
+    void setSustainEnd(int _sustainEnd)
+    {
+        sustainEnd = _sustainEnd;
+        setEnvelopeParameters();
+    }
+
+
+    void setEnvelopeParameters()
+    {
+        /*attackStart =  0 ;*/
+        attackEnd =  attackStart + static_cast<int>(sampleRate * attack) ;
+
+        decayStart = attackEnd + 1 ;
+        decayEnd = decayStart + static_cast<int>(sampleRate * decay) ;
+
+        sustainStart = decayEnd + 1 ;
+        //sustainEnd = sustainStart + static_cast<int>(sampleRate * (start + duration)) ;
+
+        releaseStart = sustainEnd + 1 ;
+        releaseEnd = releaseStart + static_cast<int>(sampleRate * release) ;
+
+        //0-1, 1 - 0.8 , 0.8 - 0.8, 0.8 - 0
+        attackDelta =  1.0 / (attackEnd - attackStart) ;
+        decayDelta = -0.2 / (decayEnd - decayStart) ;
+        sustainDelta = 0.0 ;
+        releaseDelta =  -0.8 / (releaseEnd - releaseStart) ;
+    }
+
+    int getReleaseEnd()
+    {
+        return releaseEnd;
+    }
+
+    float processEnvelope(int _sample)
+    {
+        // Attack Phase (0.0 to 1.0)
+        if (_sample >= attackStart && _sample < attackEnd) {
+            float progress = static_cast<float>(_sample - attackStart) / (attackEnd - attackStart);
+            envAmplitude = progress; // Directly interpolate from 0 to 1
+        }
+        // Decay Phase (1.0 to 0.8)
+        else if (_sample >= decayStart && _sample < decayEnd) {
+            float progress = static_cast<float>(_sample - decayStart) / (decayEnd - decayStart);
+            // 1.0 down to 0.8
+            envAmplitude = 1.0f - (0.2f * progress);
+        }
+        // Sustain Phase (Hold at 0.8)
+        else if (_sample >= sustainStart && _sample < sustainEnd) {
+            envAmplitude = 0.8f;
+        }
+        // Release Phase (0.8 to 0.0)
+        else if (_sample >= releaseStart && _sample < releaseEnd) {
+            float progress = static_cast<float>(_sample - releaseStart) / (releaseEnd - releaseStart);
+            // Lerp from 0.8 down to 0.0
+            envAmplitude = 0.8f - (0.8f * progress);
+        }
+        // Note is fully finished
+        else {
+            envAmplitude = 0.0f;
+        }
+
+        return envAmplitude;
+    }
 
 };
 

@@ -36,9 +36,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="9abcea17-f14f-43f6-9494-8f23650bc7b5" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/../assignment_2/assignment_2/Source/Oscillator.h" beforeDir="false" afterPath="$PROJECT_DIR$/../assignment_2/assignment_2/Source/Oscillator.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../assignment_2/assignment_2/Source/PluginProcessor.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/../assignment_2/assignment_2/Source/PluginProcessor.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../assignment_2/assignment_2/Source/PluginProcessor.h" beforeDir="false" afterPath="$PROJECT_DIR$/../assignment_2/assignment_2/Source/PluginProcessor.h" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -168,7 +166,7 @@
       <workItem from="1770820117989" duration="968000" />
       <workItem from="1770983248730" duration="72000" />
       <workItem from="1771599338363" duration="162000" />
-      <workItem from="1771600766564" duration="5702000" />
+      <workItem from="1771600766564" duration="7746000" />
     </task>
     <servers />
   </component>

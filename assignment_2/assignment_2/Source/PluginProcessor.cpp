@@ -41,16 +41,16 @@ void Assignment_2AudioProcessor::prepareToPlay(double sampleRate, int samplesPer
 
     // Create the oscillators
 
-    Oscillator osc1(1, sampleRate, 0.0, 180.0, 440.0, "triangle", 1, "multiply", std::vector<int>{1, 2, 3});
-    Oscillator osc2(1, sampleRate, 3.0, 60.0, 200.0, "sin", 1, "multiply", std::vector<int>{1, 2, 3});
-    Oscillator osc3(1, sampleRate, 10.0, 6.0, 40.0, "sqaure", 1, "multiply", std::vector<int>{1, 2, 3});
-    Oscillator osc4(1, sampleRate, 14.0, 45.0, 80.0, "square", 1, "multiply", std::vector<int>{1, 2, 3});
-    Oscillator osc5(1, sampleRate, 12.0, 50.0, 70.0, "sin", 1, "multiply", std::vector<int>{1, 2, 3});
-    Oscillator osc6(1, sampleRate, 18.0, 22.0, 100.0, "sin", 1, "multiply", std::vector<int>{1, 2, 3});
-    Oscillator osc7(1, sampleRate, 6.0, 18.0, 250.0, "triangle", 1, "multiply", std::vector<int>{1, 2, 3});
-    Oscillator osc8(1, sampleRate, 7.0, 70.0, 200.0, "sin", 1, "multiply", std::vector<int>{1, 2, 3});
-    Oscillator osc9(1, sampleRate, 9.0, 12.0, 75.0, "square", 1, "multiply", std::vector<int>{1, 2, 3});
-    Oscillator osc10(1, sampleRate, 11.0, 100.0, 98.0, "sin", 1, "multiply", std::vector<int>{1, 2, 3});
+    Oscillator osc1(1, sampleRate, 0.0, 10.0, 440.0, "saw", 1, "multiply", std::vector<int>{1, 2, 3});
+    //Oscillator osc2(1, sampleRate, 0.0, 60.0, 550.0, "saw", 1, "multiply", std::vector<int>{1, 2, 3});
+    //Oscillator osc3(1, sampleRate, 0.0, 60.0, 660.0, "saw", 1, "multiply", std::vector<int>{1, 2, 3});
+    //Oscillator osc4(1, sampleRate, 14.0, 45.0, 80.0, "pink", 0.2, "multiply", std::vector<int>{1, 2, 3});
+    //Oscillator osc5(1, sampleRate, 12.0, 50.0, 70.0, "white", 0.4, "multiply", std::vector<int>{1, 2, 3});
+    //Oscillator osc6(1, sampleRate, 18.0, 22.0, 100.0, "sin", 1, "multiply", std::vector<int>{1, 2, 3});
+    //Oscillator osc7(1, sampleRate, 6.0, 18.0, 250.0, "triangle", 1, "multiply", std::vector<int>{1, 2, 3});
+    //Oscillator osc8(1, sampleRate, 7.0, 70.0, 200.0, "sin", 1, "multiply", std::vector<int>{1, 2, 3});
+    //Oscillator osc9(1, sampleRate, 9.0, 12.0, 75.0, "square", 1, "multiply", std::vector<int>{1, 2, 3});
+    //Oscillator osc10(1, sampleRate, 11.0, 100.0, 98.0, "sin", 1, "multiply", std::vector<int>{1, 2, 3});
 
     // Store the oscillators
     //oscillatorArray oscillatorList;
@@ -58,20 +58,20 @@ void Assignment_2AudioProcessor::prepareToPlay(double sampleRate, int samplesPer
     oscillatorList.clear();
 
     oscillatorList.push_back(osc1);
-    oscillatorList.push_back(osc2);
-    oscillatorList.push_back(osc3);
-    oscillatorList.push_back(osc4);
-    oscillatorList.push_back(osc5);
-    oscillatorList.push_back(osc6);
-    oscillatorList.push_back(osc7);
-    oscillatorList.push_back(osc8);
-    oscillatorList.push_back(osc9);
-    oscillatorList.push_back(osc10);
+    //oscillatorList.push_back(osc2);
+    //oscillatorList.push_back(osc3);
+    //oscillatorList.push_back(osc4);
+    //oscillatorList.push_back(osc5);
+    //oscillatorList.push_back(osc6);
+    //oscillatorList.push_back(osc7);
+    //oscillatorList.push_back(osc8);
+    //oscillatorList.push_back(osc9);
+    //oscillatorList.push_back(osc10);
 
     // FILTER --------------------------------------------
 
     // Create our filter coefficients
-    auto coeffs = juce::IIRCoefficients::makeLowPass(sampleRate, 250.0, 0.707);
+    auto coeffs = juce::IIRCoefficients::makeLowPass(sampleRate, 300.0, 0.707);
 
     leftFilter.setCoefficients(coeffs);
     rightFilter.setCoefficients(coeffs);
@@ -91,6 +91,8 @@ void Assignment_2AudioProcessor::prepareToPlay(double sampleRate, int samplesPer
     reverbParameters.width = 1.0f;      // Stereo width
 
     reverb.setParameters(reverbParameters);
+
+    // ENVELOPES ----------------
 
   
 }
@@ -117,58 +119,63 @@ void Assignment_2AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
     auto* leftChannel{ buffer.getWritePointer(0) };
     auto* rightChannel{ buffer.getWritePointer(1) };
 
+    Envelope env1(getSampleRate(), 5, 0.05, 0.5, 5);
+
 
     for (int i = 0; i < numSamples; i++) {
-        // leftChannel[i] = getGain() * ((random.nextFloat() * 2.0f) -1);
-        // rightChannel[i] = getGain() * ((random.nextFloat() * 2.0f) -1);
+
 
         //If adding, this needs to be zero
         // If multiplying, needs to be greater than zero
-        float sample{ 0.9 };
+        float sample{ 0 };
 
 
         for ( int o = 0; o < oscillatorList.size() ; o++)
         {
 
+            oscillatorList[0].make();
 
+            //if ( !oscillatorList[o].getActive() && ( totalSamplesProcessed >= oscillatorList[o].getStartSample() ) )
+            //{
+            //    oscillatorList[o].setActive( true ); // turn it on
+            //}
 
-            if ( !oscillatorList[o].getActive() && ( totalSamplesProcessed >= oscillatorList[o].getStartSample() ) )
-            {
-                oscillatorList[o].setActive( true ); // turn it on
-            }
+            //if ( oscillatorList[o].getActive() && ( totalSamplesProcessed >= oscillatorList[o].getLastSample() ) )
+            //{
+            //    oscillatorList[o].setActive( false ); // turn it off
+            //}
 
-            if ( oscillatorList[o].getActive() && ( totalSamplesProcessed >= oscillatorList[o].getLastSample() ) )
-            {
-                oscillatorList[o].setActive( false ); // turn it off
-            }
-
-            if (oscillatorList[o].getActive())
-            {
-                sample *= oscillatorList[o].make();
-            }
-
+            //if (oscillatorList[o].getActive())
+            //{
+            //    sample += oscillatorList[o].process();
+            //}
 
         }   
+
+        sample = sample * env1.processEnvelope(totalSamplesProcessed);
         
-        leftChannel[i] = sample; // / (2*oscillatorList.size());
-        rightChannel[i] = sample; // / (2*oscillatorList.size());
+        // If adding then need to divide  by number of oscillators. Omit this if multiplying
+        leftChannel[i] = sample  / (2*oscillatorList.size());
+        rightChannel[i] = sample  / (2*oscillatorList.size());
+
+        totalSamplesProcessed++;
 
     }
 
     // Apply the filters to the samples
 
-    leftFilter.processSamples(leftChannel, numSamples);
-    rightFilter.processSamples(rightChannel, numSamples);
+    //leftFilter.processSamples(leftChannel, numSamples);
+    //rightFilter.processSamples(rightChannel, numSamples);
 
 
     // Apply the reverb to the samples
 
-    reverb.processStereo(leftChannel, rightChannel, numSamples);
+    //reverb.processStereo(leftChannel, rightChannel, numSamples);
 
 
     // 
 
-    totalSamplesProcessed += numSamples;
+    //totalSamplesProcessed += numSamples;
 
 }
 
