@@ -45,26 +45,57 @@ void Assignment_2AudioProcessor::prepareToPlay(double sampleRate, int samplesPer
 
     // Create the musical oscillators
 
-    oscillatorList.clear();
+    oscillatorGroups.clear();
+
+    // Create the first group -----------------------------
+
+    std::vector<Oscillator> group1;
 
     Oscillator osc1(sampleRate, 0.0, 20.0, 100, "saw", 1);
     osc1.setEnvelope(sampleRate, 5, 0.1, 0.9, 5);
-    oscillatorList.push_back(osc1);
+    group1.push_back(osc1);
 
 
     Oscillator osc2(sampleRate, 4.0, 20.0, 102.0, "square", 1);
     osc2.setEnvelope(sampleRate, 1, 0.1, 0.8, 5);
-    oscillatorList.push_back(osc2);
+    group1.push_back(osc2);
 
 
     Oscillator osc3(sampleRate, 2.0, 20.0, 99, "triangle", 1);
     osc3.setEnvelope(sampleRate, 3, 0.4, 0.5, 3);
-    oscillatorList.push_back(osc3);
+    group1.push_back(osc3);
 
 
     Oscillator osc4(sampleRate, 4.0, 22.0, 99, "pink", 0.4);
     osc4.setEnvelope(sampleRate, 3, 0.4, 0.6, 3);
-    oscillatorList.push_back(osc4);
+    group1.push_back(osc4);
+
+    oscillatorGroups.push_back(group1);
+
+    // Create the second group -----------------------------
+
+    std::vector<Oscillator> group2;
+
+    Oscillator osc5(sampleRate, 0.0, 20.0, 600, "saw", 1);
+    osc5.setEnvelope(sampleRate, 5, 0.1, 0.9, 5);
+    group2.push_back(osc5);
+
+
+    Oscillator osc6(sampleRate, 4.0, 20.0, 601, "square", 1);
+    osc6.setEnvelope(sampleRate, 1, 0.1, 0.8, 5);
+    group2.push_back(osc6);
+
+
+    Oscillator osc7(sampleRate, 2.0, 20.0, 777, "triangle", 1);
+    osc7.setEnvelope(sampleRate, 3, 0.4, 0.5, 3);
+    group2.push_back(osc7);
+
+
+    Oscillator osc8(sampleRate, 4.0, 22.0, 800, "pink", 0.4);
+    osc8.setEnvelope(sampleRate, 3, 0.4, 0.6, 3);
+    group2.push_back(osc8);
+
+    oscillatorGroups.push_back(group2);
 
     // Create modulation oscillators
 
@@ -72,15 +103,9 @@ void Assignment_2AudioProcessor::prepareToPlay(double sampleRate, int samplesPer
     modOsc1.setEnvelope(sampleRate, 0.001, 0.001, 0.999, 0.001);
     modulatorList.push_back(modOsc1);
 
-
-    // FILTER --------------------------------------------
-
-    // Create our filter coefficients
-    //auto coeffsLeft = juce::IIRCoefficients::makeLowPass(sampleRate, 120.0, 1.1);
-    //auto coeffsRight = juce::IIRCoefficients::makeLowPass(sampleRate, 60.0, 4);
-
-    //leftFilter.setCoefficients(coeffsLeft);
-    //rightFilter.setCoefficients(coeffsRight);
+    Oscillator modOsc2(sampleRate, startTime, endTime, 4, "sin", 1);
+    modOsc2.setEnvelope(sampleRate, 0.001, 0.001, 0.999, 0.001);
+    modulatorList.push_back(modOsc2);
 
 
     // REVERB --------------------------------------------
@@ -130,43 +155,45 @@ void Assignment_2AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
 
     for (int i = 0; i < numSamples; i++) {
 
-        mix = 0;
-
-        for ( int o = 0; o < oscillatorList.size() ; o++)
-        {
-
-            mix += oscillatorList[o].make();
-
-        }
-
-        mix = mix / (2 * oscillatorList.size());
+        
+        // Process the oscillator banks
+        float mix1{ processOscList( oscillatorGroups[0] )};
+        float mix2{ processOscList( oscillatorGroups[1] )};
 
         // Add one to the number of samples processed
         totalSamplesProcessed++;
 
 
-        // FILTER --------------------------------------------
+        // FILTERS --------------------------------------------
 
-        float mod1Floor = 500;
-        float mod1Base = 50;
-        float mod1Middle = (mod1Floor + mod1Base) / 2.0;
-        float mod1Diff = (mod1Floor - mod1Base) / 2.0;
+        // Set the modulation of the filters if necessary
+        float mod1 { setModBoundary(modulatorList[0].make() , 500.0 , 50.0) };
+        float mod2 { setModBoundary(modulatorList[1].make() , 100.0 , 40.0) };
 
-        float mod1{ mod1Diff * (modulatorList[0].make()) + mod1Middle };
 
         // Create our filter coefficients
-        auto coeffsLeft = juce::IIRCoefficients::makeLowPass(getSampleRate(), mod1 , 1.1);
-        auto coeffsRight = juce::IIRCoefficients::makeLowPass(getSampleRate(), mod1 , 4);
+        auto c1 = juce::IIRCoefficients::makeLowPass(getSampleRate(), mod1 , 1.1);
+        auto c2 = juce::IIRCoefficients::makeLowPass(getSampleRate(), mod2 , 1.5);
+        auto c3 = juce::IIRCoefficients::makeLowPass(getSampleRate(), 300 , 0.707); // No modulation example 
 
-        leftFilter.setCoefficients(coeffsLeft);
-        rightFilter.setCoefficients(coeffsRight);
+        // The filter contruction needs to stay outside of the loop
+        filter1.setCoefficients(c1);
+        filter2.setCoefficients(c2);
 
-        float filteredleft = leftFilter.processSingleSampleRaw(mix);
-        float filteredright = rightFilter.processSingleSampleRaw(mix);
+        float f1 = filter1.processSingleSampleRaw( mix2 );
+        float f2 = filter2.processSingleSampleRaw( mix1);
+
+        // Soft clipping
+        float drive = 2.0f; // increase for more distortion
+        float softClipped1 = std::tanh(drive * f1);
+        float softClipped2 = std::tanh(drive * f2);
+
+        float masterRight{ softClipped1 };
+        float masterLeft{ softClipped2 };
 
 
-        leftChannel[i] = filteredleft;
-        rightChannel[i] = filteredright;
+        leftChannel[i] = masterLeft;
+        rightChannel[i] = masterRight;
 
     }
 

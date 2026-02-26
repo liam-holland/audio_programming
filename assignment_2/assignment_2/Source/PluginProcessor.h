@@ -9,7 +9,9 @@
 #pragma once
 
 #include <JuceHeader.h>
+
 #include "Oscillator.h"
+#include "Filter.h"
 
 //==============================================================================
 /**
@@ -59,16 +61,53 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Assignment_2AudioProcessor)
     
     juce::Random random;
+
+    // Create a vector if vectors. Should change this into a class 
+    std::vector<std::vector<Oscillator>> oscillatorGroups;
     
-    std::vector<Oscillator> oscillatorList;
+    // This will house all of the modulators
     std::vector<Oscillator> modulatorList;
 
     int totalSamplesProcessed = 0;
-    juce::IIRFilter leftFilter;
-    juce::IIRFilter rightFilter;
+
+    juce::IIRFilter filter1;
+    juce::IIRFilter filter2;
+
 
     juce::Reverb reverb;
     juce::Reverb::Parameters reverbParameters;
 
     float mix{ 0 };
+
+    float setModBoundary(float _modValue, float modFloor, float modBase)
+    {
+        float modDiff = (modFloor + modBase) / 2.0f;
+        float modMiddle = (modFloor - modBase) / 2.0f;
+
+        return (modDiff * _modValue) + modMiddle;
+    }
+
+    float processOscList(std::vector<Oscillator>& _oscillatorGroup)
+    {
+        float mix { 0 };
+
+        for (int o = 0; o < _oscillatorGroup.size(); o++)
+        {
+
+            mix += _oscillatorGroup[o].make();
+
+        }
+
+        mix = 0.9f * (mix / (_oscillatorGroup.size()));
+
+        return mix;
+    }
+
+    //struct modBoundaryValues
+    //{
+    //    float modFloor;
+    //    float modBase;
+    //    float modMiddle;
+    //    float modDiff;
+    //};
 };

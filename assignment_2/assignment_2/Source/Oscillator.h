@@ -55,6 +55,14 @@ public:
         setEnvelopeParameters();
     }
 
+
+     /**
+     * @param _sampleRate_ Set the sample rate of the evnvelope
+     * @param _attack_ Set the attack time of the envelope
+     * @param _decay_ Set the decay time of the envelope
+     * @param _sustainLevel_ Set the sustain level (0.0 - 1.0 float)
+     * @param _release_ Set the release time after the oscillator ends
+     */
     explicit Envelope(int _sampleRate_, float _attack_, float _decay_, float _sustainLevel_, float _release_)
     {
         setSampleRate(_sampleRate_);
