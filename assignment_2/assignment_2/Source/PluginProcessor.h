@@ -63,10 +63,18 @@ private:
     juce::Random random;
 
     // Create a vector if vectors. Should change this into a class 
-    std::vector<std::vector<Oscillator>> oscillatorGroups;
+    std::vector<OscillatorGroup> oscillatorGroups;
     
     // This will house all of the modulators
-    std::vector<Oscillator> modulatorList;
+    OscillatorGroup modulatorList;
+
+    // This will house all of the filters
+    std::vector<juce::IIRFilter> filterList;
+
+
+    juce::Reverb reverb1;
+    juce::Reverb reverb2;
+
 
     int totalSamplesProcessed = 0;
 
@@ -74,40 +82,19 @@ private:
     juce::IIRFilter filter2;
 
 
-    juce::Reverb reverb;
-    juce::Reverb::Parameters reverbParameters;
-
     float mix{ 0 };
 
-    float setModBoundary(float _modValue, float modFloor, float modBase)
+    float setModBoundary(float _modValue, float modFloor, float modCeiling)
     {
-        float modDiff = (modFloor + modBase) / 2.0f;
-        float modMiddle = (modFloor - modBase) / 2.0f;
+        float modMiddle = (modFloor + modCeiling) / 2.0f;
+        float modAmplitude = (modCeiling - modMiddle);
 
-        return (modDiff * _modValue) + modMiddle;
+        return (modAmplitude * _modValue) + modMiddle;
     }
 
-    float processOscList(std::vector<Oscillator>& _oscillatorGroup)
-    {
-        float mix { 0 };
 
-        for (int o = 0; o < _oscillatorGroup.size(); o++)
-        {
+    float softLimit (float input) {
+        return std::tanh(input) * 0.8f;
+        };
 
-            mix += _oscillatorGroup[o].make();
-
-        }
-
-        mix = 0.9f * (mix / (_oscillatorGroup.size()));
-
-        return mix;
-    }
-
-    //struct modBoundaryValues
-    //{
-    //    float modFloor;
-    //    float modBase;
-    //    float modMiddle;
-    //    float modDiff;
-    //};
 };

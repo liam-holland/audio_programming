@@ -193,6 +193,20 @@ public:
      * @param _amplitude_ Set the amplitude of the oscillator (between 0 - 1)
      */
 
+     // Set the default behaviour
+    Oscillator() : sampleRate(48000),
+        start(0.01f),
+        duration(0.1f),
+        frequency(0.8f),
+        shape("sin"),
+        amplitude(0.5f)
+
+    {
+        setPhaseDelta();
+        setStartSample();
+        setLastSample();
+    }
+
     explicit Oscillator
     (   
           int _sampleRate_
@@ -217,20 +231,6 @@ public:
         setLastSample();
         
     }
-
-    // Osc ID
-
-    void setOscID(int _oscID)
-    {
-        oscID = _oscID;
-    }
-
-
-    float getOscID()
-    {
-        return oscID;
-    }
-
 
 
     // Sample rate ----------------------------
@@ -281,6 +281,7 @@ public:
     void setFrequency(float _frequency)
     {
         frequency = _frequency;
+        setPhaseDelta();
     }
 
     float getFrequency()
@@ -336,29 +337,6 @@ public:
     {
         return lastSample;
     }
-
-    //Active or not
-
-    //void setActive()
-    //{
-    //    
-
-    //    if ( getActive() != true && currentSample >= getStartSample() )
-    //    {
-    //        isActive = true;
-    //    }
-
-    //    if (getActive() == true && currentSample >= envelope.getReleaseEnd() )
-    //    {
-    //        isActive = false;
-    //    }
-
-    //}
-
-    //bool getActive()
-    //{
-    //    return isActive;
-    //}
 
 
     // Phase and phase delta
@@ -427,7 +405,6 @@ public:
     float make()
     {
         setCurrentSample();
-        //setActive();
 
         env = envelope.processEnvelope(currentSample);
                 
@@ -528,8 +505,7 @@ private:
     float frequency{};
     std::string shape{};
     float amplitude{};
-    std::string addSubtractMultiply{};
-    std::vector<int> oscRange{};
+
 
     int sampleRate{};
     int firstSample{};
@@ -560,103 +536,84 @@ private:
 };
 
 
-// I think JUCE already has a delay!!!
+class OscillatorGroup
+{
+private:
 
-//class delayEffect
-//{
-//public:
-//    /**
-//    *
-//    * 
-//    * 
-//    * 
-//    */
-//    explicit delayEffect(int _sampleRate_, float _start_, float _duration_, float _delayTime_, float _wet_)
-//    {
-//        setSampleRate(_sampleRate_);
-//        setStart(_start_);
-//        setDuration(_duration_);
-//        setDelayTime(_delayTime_);
-//        setWet(_wet_);
-//
-//        setDelaySamples();
-//
-//    }
-//
-//    void setSampleRate(int _sampleRate)
-//    {
-//        sampleRate = _sampleRate;
-//    }
-//
-//    void setStart(float _start)
-//    {
-//        start = _start;
-//    }
-//
-//    void setDuration(float _duration)
-//    {
-//        duration = _duration;
-//    }
-//
-//    void setDelayTime(float _delayTime)
-//    {
-//        delayTime = _delayTime;
-//    }
-//
-//    void setWet(float _wet)
-//    {
-//        wet = _wet;
-//    }
-//
-//    void setDelaySamples()
-//    {
-//        delaySamples = static_cast<int>(delayTime * sampleRate);
-//    }
-//
-//    void sampleTimes()
-//    {
-//
-//    }
-//
-//    void setDelayedSample()
-//    {
-//        startSample = static_cast<int>(sampleRate * start);
-//        endSample = static_cast<int>(sampleRate * (start + duration));
-//    }
-//
-//    float processDelay(float sampleX)
-//    {
-//
-//        if (sampleCount >= startSample && sampleCount < endSample)
-//        sampleY = sampleX + wet * sampleXN;
-//
-//       
-//        sample
-//
-//        sampleCount++;
-//    }
-//
-//
-//private:
-//    
-//    int sampleRate;
-//    float start{};
-//    float duration{};
-//    float delayTime{};
-//    float wet{};
-//
-//    int startSample{};
-//    int endSample{};
-//
-//    int delaySamples{};
-//    float sampleX{};
-//    float sampleXN{0};
-//    int sampleCount{0};
-//
-//    float sampleY{};
-//
-//
-//};
+    std::vector<Oscillator> oscGroup;
 
+public:
+
+    //Return the oscillator index
+    Oscillator& operator[](size_t index)
+    {
+        return oscGroup[index];
+    }
+
+    const Oscillator& operator[](size_t index) const
+    {
+        return oscGroup[index];
+    }
+
+    void clear()
+    {
+        oscGroup.clear();
+    }
+
+    void addOscillator(Oscillator _osc)
+    {
+        oscGroup.emplace_back(_osc);
+    }
+
+    void setStartAll(float _start)
+    {
+        for (int o = 0; o < oscGroup.size(); o++)
+        {
+
+            oscGroup[o].setStart(_start);
+            oscGroup[o].setStartSample();
+
+        }
+    }
+
+    void setDurationAll(float _duration)
+    {
+        for (int o = 0; o < oscGroup.size(); o++)
+        {
+
+            oscGroup[o].setDuration(_duration);
+            oscGroup[o].setLastSample();
+
+        }
+    }
+
+    void setEnvelopeAll(float _sampleRate, float _attackTime, float _decayTime, float _sustainLevel, float _releaseTime)
+    {
+        for (int o = 0; o < oscGroup.size(); o++)
+        {
+
+            oscGroup[o].setEnvelope( _sampleRate, _attackTime , _decayTime , _sustainLevel , _releaseTime);
+
+        }
+    }
+
+
+    float processOscList()
+    {
+        float mix{ 0.0f };
+
+        for (int o = 0; o < oscGroup.size(); o++)
+        {
+
+            mix += oscGroup[o].make();
+
+        }
+
+        mix = 0.5f * (mix / (oscGroup.size()));
+
+        return mix;
+    }
+
+};
 
 

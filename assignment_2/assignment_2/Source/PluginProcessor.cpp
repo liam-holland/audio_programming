@@ -24,13 +24,13 @@ Assignment_2AudioProcessor::Assignment_2AudioProcessor()
 #endif
 {
 }
-
 Assignment_2AudioProcessor::~Assignment_2AudioProcessor()
 {
 }
 
 //==============================================================================
 // These two fucntions are the only two that we need
+
 
 void Assignment_2AudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
@@ -43,84 +43,138 @@ void Assignment_2AudioProcessor::prepareToPlay(double sampleRate, int samplesPer
     float startTime{ 0.0 };
     float endTime{ 180.0 };
 
-    // Create the musical oscillators
+
+    // Clear all lists
 
     oscillatorGroups.clear();
+    modulatorList.clear();
+    filterList.clear();
 
-    // Create the first group -----------------------------
+    // Create the musical oscillators
 
-    std::vector<Oscillator> group1;
-
-    Oscillator osc1(sampleRate, 0.0, 20.0, 100, "saw", 1);
-    osc1.setEnvelope(sampleRate, 5, 0.1, 0.9, 5);
-    group1.push_back(osc1);
-
-
-    Oscillator osc2(sampleRate, 4.0, 20.0, 102.0, "square", 1);
-    osc2.setEnvelope(sampleRate, 1, 0.1, 0.8, 5);
-    group1.push_back(osc2);
-
-
-    Oscillator osc3(sampleRate, 2.0, 20.0, 99, "triangle", 1);
-    osc3.setEnvelope(sampleRate, 3, 0.4, 0.5, 3);
-    group1.push_back(osc3);
-
-
-    Oscillator osc4(sampleRate, 4.0, 22.0, 99, "pink", 0.4);
-    osc4.setEnvelope(sampleRate, 3, 0.4, 0.6, 3);
-    group1.push_back(osc4);
-
+    // =================== GROUP 1: Low foundational drones ===================
+    OscillatorGroup group1;
+    group1.addOscillator(Oscillator(sampleRate, 0.0f, 0.0f, 60.0f, "saw", 0.4f));
+    group1.addOscillator(Oscillator(sampleRate, 0.0f, 0.0f, 62.0f, "triangle", 0.3f));
+    group1.addOscillator(Oscillator(sampleRate, 0.0f, 0.0f, 55.0f, "sin", 0.5f));
+    group1.setStartAll(0.0f);
+    group1.setDurationAll(180.0f);
+    group1.setEnvelopeAll(sampleRate, 5, 0.3, 0.8, 5);
     oscillatorGroups.push_back(group1);
 
-    // Create the second group -----------------------------
-
-    std::vector<Oscillator> group2;
-
-    Oscillator osc5(sampleRate, 0.0, 20.0, 600, "saw", 1);
-    osc5.setEnvelope(sampleRate, 5, 0.1, 0.9, 5);
-    group2.push_back(osc5);
-
-
-    Oscillator osc6(sampleRate, 4.0, 20.0, 601, "square", 1);
-    osc6.setEnvelope(sampleRate, 1, 0.1, 0.8, 5);
-    group2.push_back(osc6);
-
-
-    Oscillator osc7(sampleRate, 2.0, 20.0, 777, "triangle", 1);
-    osc7.setEnvelope(sampleRate, 3, 0.4, 0.5, 3);
-    group2.push_back(osc7);
-
-
-    Oscillator osc8(sampleRate, 4.0, 22.0, 800, "pink", 0.4);
-    osc8.setEnvelope(sampleRate, 3, 0.4, 0.6, 3);
-    group2.push_back(osc8);
-
+    // =================== GROUP 2: Mid harmonic layer ===================
+    OscillatorGroup group2;
+    group2.addOscillator(Oscillator(sampleRate, 10.0f, 0.0f, 200.0f, "sin", 0.4f));
+    group2.addOscillator(Oscillator(sampleRate, 12.0f, 0.0f, 205.0f, "saw", 0.3f));
+    group2.addOscillator(Oscillator(sampleRate, 11.0f, 0.0f, 198.0f, "triangle", 0.3f));
+    group2.setStartAll(10.0f);
+    group2.setDurationAll(120.0f);
+    group2.setEnvelopeAll(sampleRate, 4, 0.4, 0.9, 4);
     oscillatorGroups.push_back(group2);
+
+    // =================== GROUP 3: High shimmer / air ===================
+    OscillatorGroup group3;
+    group3.addOscillator(Oscillator(sampleRate, 20.0f, 0.0f, 500.0f, "saw", 0.2f));
+    group3.addOscillator(Oscillator(sampleRate, 25.0f, 0.0f, 510.0f, "sin", 0.2f));
+    group3.addOscillator(Oscillator(sampleRate, 22.0f, 0.0f, 520.0f, "triangle", 0.15f));
+    group3.setStartAll(20.0f);
+    group3.setDurationAll(100.0f);
+    group3.setEnvelopeAll(sampleRate, 6, 0.3, 0.7, 6);
+    oscillatorGroups.push_back(group3);
+
+    // =================== GROUP 4: Detuned layer ===================
+    OscillatorGroup group4;
+    group4.addOscillator(Oscillator(sampleRate, 5.0f, 0.0f, 123.0f, "sin", 0.25f));
+    group4.addOscillator(Oscillator(sampleRate, 5.5f, 0.0f, 124.3f, "sin", 0.25f));
+    group4.addOscillator(Oscillator(sampleRate, 6.0f, 0.0f, 122.7f, "saw", 0.2f));
+    group4.setStartAll(5.0f);
+    group4.setDurationAll(140.0f);
+    group4.setEnvelopeAll(sampleRate, 4, 0.4, 0.95, 4);
+    oscillatorGroups.push_back(group4);
+
+    // =================== GROUP 5: Noise / texture layer ===================
+    OscillatorGroup group5;
+    group5.addOscillator(Oscillator(sampleRate, 0.0f, 0.0f, 0.0f, "pink", 0.001f));
+    group5.addOscillator(Oscillator(sampleRate, 0.0f, 0.0f, 0.0f, "white", 0.002f));
+    group5.setStartAll(0.0f);
+    group5.setDurationAll(180.0f);
+    group5.setEnvelopeAll(sampleRate, 10, 5, 0.3, 3);
+    oscillatorGroups.push_back(group5);
+
+    // =================== GROUP 6: Long evolving pads / slow movement ===================
+    OscillatorGroup group6;
+    group6.addOscillator(Oscillator(sampleRate, 15.0f, 0.0f, 180.0f, "saw", 0.3f));
+    group6.addOscillator(Oscillator(sampleRate, 15.5f, 0.0f, 182.0f, "triangle", 0.3f));
+    group6.setStartAll(15.0f);
+    group6.setDurationAll(160.0f);
+    group6.setEnvelopeAll(sampleRate, 8, 0.2, 0.95, 8);
+    oscillatorGroups.push_back(group6);
+
+    // =================== GROUP 7: Flutter ===================
+    OscillatorGroup group7;
+    group7.addOscillator(Oscillator(sampleRate, 15.0f, 0.0f, 340.0f, "sin", 0.3f));
+    group7.setStartAll(15.0f);
+    group7.setDurationAll(160.0f);
+    group7.setEnvelopeAll(sampleRate, 8, 0.2, 0.95, 8);
+    oscillatorGroups.push_back(group7);
+
 
     // Create modulation oscillators
 
-    Oscillator modOsc1(sampleRate, startTime, endTime, 6 , "sin", 1);
-    modOsc1.setEnvelope(sampleRate, 0.001, 0.001, 0.999, 0.001);
-    modulatorList.push_back(modOsc1);
+    modulatorList.addOscillator(Oscillator( sampleRate, startTime, endTime, 0.1f, "sin", 1) );
+    modulatorList.addOscillator(Oscillator( sampleRate, startTime, endTime, 1.0f, "triangle", 1) );
+    modulatorList.addOscillator(Oscillator( sampleRate, startTime, endTime, 10.0f, "sin", 1) );
 
-    Oscillator modOsc2(sampleRate, startTime, endTime, 4, "sin", 1);
-    modOsc2.setEnvelope(sampleRate, 0.001, 0.001, 0.999, 0.001);
-    modulatorList.push_back(modOsc2);
+    modulatorList.setStartAll(startTime);
+    modulatorList.setDurationAll(endTime);
+    modulatorList.setEnvelopeAll(sampleRate, 0.001, 0.001, 0.999, 0.001);
+
+
+
+    // FILTER --------------------------------------------
+
+    juce::IIRFilter filter1;
+    float filter1start = 5.0;
+    float filter2duration = 20;
+    filterList.push_back(filter1);
+    filterList[0].reset();
+
+
+    juce::IIRFilter filter2;
+    filterList.push_back(filter2);
 
 
     // REVERB --------------------------------------------
-    
-    // Set sample rate
-    reverb.setSampleRate(sampleRate);
 
-    // Initial settings
-    reverbParameters.roomSize = 0.5f;   // 0.0 to 1.0
-    reverbParameters.damping = 0.5f;    // 0.0 to 1.0
-    reverbParameters.wetLevel = 0.33f;  // Volume of the reverb
-    reverbParameters.dryLevel = 0.4f;   // Volume of the original sound
-    reverbParameters.width = 1.0f;      // Stereo width
+    // Set initial parameters
 
-    reverb.setParameters(reverbParameters);
+    // Reverb 1
+    juce::Reverb reverb1{};
+    float reverb1Start = 10.0;
+    float reverb1Duration = 20.0;
+    float reverb1Wet = 0.4;
+
+    reverb1.setSampleRate(sampleRate);
+    juce::Reverb::Parameters reverbParam1{};
+    reverbParam1.roomSize =  0.5f ;
+    reverbParam1.damping = 0.5f ;
+    reverbParam1.wetLevel =  reverb1Wet ;
+    reverbParam1.dryLevel = (1.0 - reverb1Wet) ;
+    reverbParam1.width = 0.5f ;
+
+    reverb1.setParameters(reverbParam1);
+
+    juce::Reverb reverb2{};
+
+    reverb2.setSampleRate(sampleRate);
+    juce::Reverb::Parameters reverbParam2{};
+    reverbParam2.roomSize = 0.2f;
+    reverbParam2.damping = 0.2f;
+    reverbParam2.wetLevel = 0.2f;
+    reverbParam2.dryLevel = 0.2f;
+    reverbParam2.width = 0.1f;
+
+    reverb2.setParameters(reverbParam2);
 
 
 }
@@ -151,56 +205,133 @@ void Assignment_2AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
     auto* leftChannel{ buffer.getWritePointer(0) };
     auto* rightChannel{ buffer.getWritePointer(1) };
 
-    
 
     for (int i = 0; i < numSamples; i++) {
 
-        
-        // Process the oscillator banks
-        float mix1{ processOscList( oscillatorGroups[0] )};
-        float mix2{ processOscList( oscillatorGroups[1] )};
+        // Create a sample vector and add all of the values to it
+        std::vector<float> sampleVector;
+
+        sampleVector.push_back(softLimit(oscillatorGroups[0].processOscList()));
+        sampleVector.push_back(softLimit(oscillatorGroups[1].processOscList()));
+        sampleVector.push_back(softLimit(oscillatorGroups[2].processOscList()));
+        sampleVector.push_back(softLimit(oscillatorGroups[3].processOscList()));
+        sampleVector.push_back(softLimit(oscillatorGroups[4].processOscList()));
+        sampleVector.push_back(softLimit(oscillatorGroups[5].processOscList()));
+
+        float mod3{ setModBoundary(modulatorList[2].make() , 300.0f , 1000.0f) };
+        oscillatorGroups[6][0].setFrequency(mod3);
+        sampleVector.push_back(softLimit(oscillatorGroups[6].processOscList()));
+
+        // Make sure we have samples to work with
+        float initial_mix = 0.0f;
+
+        if (!sampleVector.empty())
+        {
+            // Sum all the elements in the vector
+            float sum = 0.0f;
+            for ( int i = 0; i < sampleVector.size(); ++i)
+            {
+                sum += sampleVector[i];
+            }
+
+            // Divide the sum by the number of elements to get the mean
+            initial_mix = 0.9f * (sum / static_cast<float>(sampleVector.size()));
+        }
+        else
+        {
+            // If the vector is empty, the mean is zero
+            initial_mix = 0.0f;
+        }
+
 
         // Add one to the number of samples processed
         totalSamplesProcessed++;
 
+        //// If this was inside the for loop, I was getting strange distortion
 
-        // FILTERS --------------------------------------------
+        //// Set the modulation of the filters if desired
+        float mod1{ setModBoundary( modulatorList[0].make() , 50.0f , 1000.0f)};
+        //float mod2{ setModBoundary(modulatorList[1].make() , 100.0 , 40.0) };
+        //
+        //
 
-        // Set the modulation of the filters if necessary
-        float mod1 { setModBoundary(modulatorList[0].make() , 500.0 , 50.0) };
-        float mod2 { setModBoundary(modulatorList[1].make() , 100.0 , 40.0) };
+        ////// Create our filter coefficients
+        auto c1 = juce::IIRCoefficients::makeLowPass(getSampleRate(), mod1, 2.5);
+        //auto c1 = juce::IIRCoefficients::makeLowPass(getSampleRate(), 400, 0.707);
+        //auto c2 = juce::IIRCoefficients::makeLowPass(getSampleRate(), mod2, 0.707);
+        ////auto c3 = juce::IIRCoefficients::makeLowPass(getSampleRate(), 300 , 0.707); // No modulation example 
+
+        ////// The filter contruction needs to stay outside of the loop
+        filterList[0].setCoefficients(c1);
+        //filterList[1].setCoefficients(c2);
+
+        //filter1.setCoefficients(c1);
+
+        float f1 =  filterList[0].processSingleSampleRaw(initial_mix);
+        //float f1 = filter1.processSingleSampleRaw(mix1);
+        //filterList[1].processSamples(  rightChannel, numSamples);
+
+        //// FINAL MIXING ------------------------------------------
+
+        float masterRight{ (f1) / 2.0f };
+        float masterLeft{ (f1) / 2.0f };
+
+        float modPan{ setModBoundary( modulatorList[1].make() , 0.1 , 0.9) };
+
+        float panLeft = modPan;
+        float panRight = (1.0f - modPan);
+
+        float finalGain = 2;
+
+        leftChannel[i] = panLeft * masterLeft * finalGain;
+        rightChannel[i] = panRight * masterRight * finalGain;
 
 
-        // Create our filter coefficients
-        auto c1 = juce::IIRCoefficients::makeLowPass(getSampleRate(), mod1 , 1.1);
-        auto c2 = juce::IIRCoefficients::makeLowPass(getSampleRate(), mod2 , 1.5);
-        auto c3 = juce::IIRCoefficients::makeLowPass(getSampleRate(), 300 , 0.707); // No modulation example 
+    }
+    
+    ////// REVERB -----------------------------------
 
-        // The filter contruction needs to stay outside of the loop
-        filter1.setCoefficients(c1);
-        filter2.setCoefficients(c2);
+    std::vector<float> dryLeft(numSamples);
+    std::vector<float> dryRight(numSamples);
 
-        float f1 = filter1.processSingleSampleRaw( mix2 );
-        float f2 = filter2.processSingleSampleRaw( mix1);
-
-        // Soft clipping
-        float drive = 2.0f; // increase for more distortion
-        float softClipped1 = std::tanh(drive * f1);
-        float softClipped2 = std::tanh(drive * f2);
-
-        float masterRight{ softClipped1 };
-        float masterLeft{ softClipped2 };
-
-
-        leftChannel[i] = masterLeft;
-        rightChannel[i] = masterRight;
-
+    for (int i = 0; i < numSamples; ++i)
+    {
+        dryLeft[i] = leftChannel[i];
+        dryRight[i] = rightChannel[i];
     }
 
 
-    // Apply the reverb to the samples
+    ////// Apply the reverb to the samples
 
-    reverb.processStereo(leftChannel, rightChannel, numSamples);
+    reverb1.processStereo(leftChannel, rightChannel, numSamples);
+    reverb2.processStereo(leftChannel, rightChannel, numSamples);
+
+
+    // Apply wet and dry modulation
+    for (int i = 0; i < numSamples; ++i)
+    {
+        float wetMod = setModBoundary(modulatorList[1].make(), 0.0f, 1.0f); // 0=dry, 1=fully wet
+
+        leftChannel[i] = dryLeft[i] * (1.0f - wetMod) + leftChannel[i] * wetMod;
+        rightChannel[i] = dryRight[i] * (1.0f - wetMod) + rightChannel[i] * wetMod;
+    }
+
+    //// FINAL SAFETY
+    // We do this LAST to ensure that even if the reverb or filter 
+    // pushed the signal high, it is caught before leaving the plugin.
+    for (int i = 0; i < numSamples; i++)
+    {
+        leftChannel[i] = softLimit(leftChannel[i]);
+        rightChannel[i] = softLimit(rightChannel[i]);
+    }
+
+    //// --- TEMPORARY STEREO TEST ---
+    //// Mute the right channel entirely
+    //for (int i = 0; i < numSamples; i++) {
+    //    rightChannel[i] = 0.0f;
+    //}
+
+
 
 
 }
