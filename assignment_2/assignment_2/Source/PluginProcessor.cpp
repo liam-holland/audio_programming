@@ -8,7 +8,6 @@
 
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
-#include "Oscillator.h"
 
 //==============================================================================
 Assignment_2AudioProcessor::Assignment_2AudioProcessor()
@@ -30,7 +29,10 @@ Assignment_2AudioProcessor::~Assignment_2AudioProcessor()
 
 //==============================================================================
 // These two fucntions are the only two that we need
+//==============================================================================
 
+
+//=============== INITLISATION OF OSCILLATORS, FILTERS AND REVERB ============//
 
 void Assignment_2AudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
@@ -43,6 +45,8 @@ void Assignment_2AudioProcessor::prepareToPlay(double sampleRate, int samplesPer
     float startTime{ 0.0 };
     float endTime{ 180.0 };
 
+
+    //================= START HERE ============================================
 
     // Clear all lists
 
@@ -61,6 +65,7 @@ void Assignment_2AudioProcessor::prepareToPlay(double sampleRate, int samplesPer
     group1.setDurationAll(180.0f);
     group1.setEnvelopeAll(sampleRate, 5, 0.3, 0.8, 5);
     oscillatorGroups.push_back(group1);
+
 
     // =================== GROUP 2: Mid harmonic layer ===================
     OscillatorGroup group2;
@@ -88,7 +93,7 @@ void Assignment_2AudioProcessor::prepareToPlay(double sampleRate, int samplesPer
     group4.addOscillator(Oscillator(sampleRate, 5.5f, 0.0f, 124.3f, "sin", 0.25f));
     group4.addOscillator(Oscillator(sampleRate, 6.0f, 0.0f, 122.7f, "saw", 0.2f));
     group4.setStartAll(5.0f);
-    group4.setDurationAll(140.0f);
+    group4.setDurationAll(120.0f);
     group4.setEnvelopeAll(sampleRate, 4, 0.4, 0.95, 4);
     oscillatorGroups.push_back(group4);
 
@@ -101,47 +106,65 @@ void Assignment_2AudioProcessor::prepareToPlay(double sampleRate, int samplesPer
     group5.setEnvelopeAll(sampleRate, 10, 5, 0.3, 3);
     oscillatorGroups.push_back(group5);
 
-    // =================== GROUP 6: Long evolving pads / slow movement ===================
+    // =================== GROUP 6: Slowly adding oscillators ===================
     OscillatorGroup group6;
     group6.addOscillator(Oscillator(sampleRate, 15.0f, 0.0f, 180.0f, "saw", 0.3f));
     group6.addOscillator(Oscillator(sampleRate, 15.5f, 0.0f, 182.0f, "triangle", 0.3f));
     group6.setStartAll(15.0f);
     group6.setDurationAll(160.0f);
-    group6.setEnvelopeAll(sampleRate, 8, 0.2, 0.95, 8);
+    group6.setEnvelopeAll(sampleRate, 12, 0.2, 0.95, 20);
     oscillatorGroups.push_back(group6);
 
     // =================== GROUP 7: Flutter ===================
     OscillatorGroup group7;
-    group7.addOscillator(Oscillator(sampleRate, 15.0f, 0.0f, 340.0f, "sin", 0.3f));
+    group7.addOscillator(Oscillator(sampleRate, 15.0f, 0.0f, 1480.0f, "sin", 0.1f));
     group7.setStartAll(15.0f);
-    group7.setDurationAll(160.0f);
+    group7.setDurationAll(120.0f);
     group7.setEnvelopeAll(sampleRate, 8, 0.2, 0.95, 8);
     oscillatorGroups.push_back(group7);
+
+    // =================== GROUP 8:HF ===================
+    OscillatorGroup group8;
+    group8.addOscillator(Oscillator(sampleRate, 0.0f, 0.0f, 3000.0f, "sin", 0.4f));
+    group8.addOscillator(Oscillator(sampleRate, 0.0f, 0.0f, 3010.0f, "sin", 0.2f));
+    group8.setStartAll(0.0f);
+    group8.setDurationAll(97.0f);
+    group8.setEnvelopeAll(sampleRate, 5, 5, 0.8, 8);
+    oscillatorGroups.push_back(group8);
+
+    // =================== GROUP 9: Low - mid drones for second half ===================
+    OscillatorGroup group9;
+    group9.addOscillator(Oscillator(sampleRate, 0.0f, 0.0f, 45.0f, "saw", 0.6f));
+    group9.addOscillator(Oscillator(sampleRate, 0.0f, 0.0f, 52.0f, "triangle", 0.4f));
+    group9.addOscillator(Oscillator(sampleRate, 0.0f, 0.0f, 90.0f, "sin", 0.2f));
+    group9.addOscillator(Oscillator(sampleRate, 0.0f, 0.0f, 80.0f, "saw", 0.8f));
+    group9.setStartAll(70.0f);
+    group9.setDurationAll(180.0f);
+    group9.setEnvelopeAll(sampleRate, 5, 0.3, 0.8, 5);
+    oscillatorGroups.push_back(group9);
 
 
     // Create modulation oscillators
 
-    modulatorList.addOscillator(Oscillator( sampleRate, startTime, endTime, 0.1f, "sin", 1) );
-    modulatorList.addOscillator(Oscillator( sampleRate, startTime, endTime, 1.0f, "triangle", 1) );
-    modulatorList.addOscillator(Oscillator( sampleRate, startTime, endTime, 10.0f, "sin", 1) );
+    modulatorList.addOscillator(Oscillator(sampleRate, startTime, endTime, 1.5 / endTime, "sin", 1)); // start on high frequencies, end on low
+    modulatorList[0].setPhaseShift(0.25f);
+    modulatorList.addOscillator(Oscillator(sampleRate, startTime, endTime, 1.75 / endTime, "triangle", 1)); // add reverb slowly
+    modulatorList.addOscillator(Oscillator(sampleRate, startTime, endTime, 0.01f, "sin", 1)); // slowly pan from left to right and back
+    modulatorList.addOscillator(Oscillator(sampleRate, startTime, endTime, 20.0f, "sin", 1)); // flutter 20 times a second (FM)
+    modulatorList.addOscillator(Oscillator(sampleRate, startTime, endTime, 0.75 / endTime, "sin", 1)); // move the notch frequency
 
     modulatorList.setStartAll(startTime);
     modulatorList.setDurationAll(endTime);
     modulatorList.setEnvelopeAll(sampleRate, 0.001, 0.001, 0.999, 0.001);
 
 
-
     // FILTER --------------------------------------------
 
-    juce::IIRFilter filter1;
-    float filter1start = 5.0;
-    float filter2duration = 20;
-    filterList.push_back(filter1);
+    filterList.push_back(juce::IIRFilter());
+    filterList.push_back(juce::IIRFilter());
+
     filterList[0].reset();
-
-
-    juce::IIRFilter filter2;
-    filterList.push_back(filter2);
+    filterList[1].reset();
 
 
     // REVERB --------------------------------------------
@@ -149,35 +172,31 @@ void Assignment_2AudioProcessor::prepareToPlay(double sampleRate, int samplesPer
     // Set initial parameters
 
     // Reverb 1
-    juce::Reverb reverb1{};
-    float reverb1Start = 10.0;
-    float reverb1Duration = 20.0;
-    float reverb1Wet = 0.4;
-
     reverb1.setSampleRate(sampleRate);
     juce::Reverb::Parameters reverbParam1{};
     reverbParam1.roomSize =  0.5f ;
     reverbParam1.damping = 0.5f ;
-    reverbParam1.wetLevel =  reverb1Wet ;
-    reverbParam1.dryLevel = (1.0 - reverb1Wet) ;
+    reverbParam1.wetLevel =  1.0f ;
+    reverbParam1.dryLevel = 0.0f ;
     reverbParam1.width = 0.5f ;
 
     reverb1.setParameters(reverbParam1);
 
-    juce::Reverb reverb2{};
+    // Reverb 2
 
     reverb2.setSampleRate(sampleRate);
     juce::Reverb::Parameters reverbParam2{};
-    reverbParam2.roomSize = 0.2f;
+    reverbParam2.roomSize = 0.3f;
     reverbParam2.damping = 0.2f;
-    reverbParam2.wetLevel = 0.2f;
-    reverbParam2.dryLevel = 0.2f;
-    reverbParam2.width = 0.1f;
+    reverbParam2.wetLevel = 1.0f;
+    reverbParam2.dryLevel = 0.0f;
+    reverbParam2.width = 1.0f;
 
-    reverb2.setParameters(reverbParam2);
-
+    reverb1.setParameters(reverbParam2);
 
 }
+
+//=============== CREATION OF SAMPLE VALUES, FILTERING AND EFFECTS ============//
 
 void Assignment_2AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
@@ -208,6 +227,8 @@ void Assignment_2AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
 
     for (int i = 0; i < numSamples; i++) {
 
+        // =========== PROCESS MUSICAL OSCILLATORS ===========//
+
         // Create a sample vector and add all of the values to it
         std::vector<float> sampleVector;
 
@@ -217,14 +238,23 @@ void Assignment_2AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
         sampleVector.push_back(softLimit(oscillatorGroups[3].processOscList()));
         sampleVector.push_back(softLimit(oscillatorGroups[4].processOscList()));
         sampleVector.push_back(softLimit(oscillatorGroups[5].processOscList()));
+        sampleVector.push_back(softLimit(oscillatorGroups[7].processOscList()));
 
-        float mod3{ setModBoundary(modulatorList[2].make() , 300.0f , 1000.0f) };
-        oscillatorGroups[6][0].setFrequency(mod3);
+        // Use frequency modulation one of the oscillatiors for a flutter effect
+        float flutterMod{ juce::jmap( modulatorList[3].make() ,-1.0f, 1.0f , 1400.0f , 1480.0f) };
+        oscillatorGroups[6][0].setFrequency(flutterMod);
         sampleVector.push_back(softLimit(oscillatorGroups[6].processOscList()));
 
-        // Make sure we have samples to work with
-        float initial_mix = 0.0f;
 
+        // Add one to the number of samples processed
+        totalSamplesProcessed++;
+
+        // =========== MIX MUSICAL OSCILLATORS ===========//
+
+        // set initial mix value
+        float initial_mix{ 0.0f };
+
+        // Mix the oscillator output
         if (!sampleVector.empty())
         {
             // Sum all the elements in the vector
@@ -243,53 +273,84 @@ void Assignment_2AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
             initial_mix = 0.0f;
         }
 
+        // =========== PROCESS THE MODULATORS ===========//
 
-        // Add one to the number of samples processed
-        totalSamplesProcessed++;
+        // High pas filter
+        // I want the filter to focus on the extremes (high and low frequencies)
+        
+        float rawHighPass = modulatorList[0].make();
 
-        //// If this was inside the for loop, I was getting strange distortion
+        // Simple Sigmoid Shaping, learnt about this is AML
+        // This formula "pushes" values toward the extremes (-1 and 1)
+        float intensity = 4.0f; // Higher = more time at the ends, less in the middle
+        float sigmoid = std::tanh(intensity * rawHighPass) / std::tanh(intensity);
 
-        //// Set the modulation of the filters if desired
-        float mod1{ setModBoundary( modulatorList[0].make() , 50.0f , 1000.0f)};
-        //float mod2{ setModBoundary(modulatorList[1].make() , 100.0 , 40.0) };
-        //
-        //
+        // Can use jmap to set the boundaries of the modulator
+        float highPassMod = juce::jmap(sigmoid, -1.0f, 1.0f, 1.0f, 6000.0f);
 
-        ////// Create our filter coefficients
-        auto c1 = juce::IIRCoefficients::makeLowPass(getSampleRate(), mod1, 2.5);
-        //auto c1 = juce::IIRCoefficients::makeLowPass(getSampleRate(), 400, 0.707);
-        //auto c2 = juce::IIRCoefficients::makeLowPass(getSampleRate(), mod2, 0.707);
-        ////auto c3 = juce::IIRCoefficients::makeLowPass(getSampleRate(), 300 , 0.707); // No modulation example 
+        // Notch filter
+        float peakMod = juce::jmap(modulatorList[4].make(), -1.0f, 1.0f, 1000.0f, 6000.0f);
 
-        ////// The filter contruction needs to stay outside of the loop
+        // Panning modulator
+        float panMod{ juce::jmap(modulatorList[2].make() , -1.0f , 1.0f , 0.1f , 0.9f) };
+        
+        // =========== SET FILTERS AND PROCESS THE SAMPLES ===========//
+
+
+        // Create our filter coefficients
+        auto c1 = juce::IIRCoefficients::makeHighPass(getSampleRate(), highPassMod, 1.0);
+        auto c2 = juce::IIRCoefficients::makePeakFilter(getSampleRate(), peakMod, 0.4, 1.2);
+
+        // Set coefficients
         filterList[0].setCoefficients(c1);
-        //filterList[1].setCoefficients(c2);
+        filterList[1].setCoefficients(c2);
 
-        //filter1.setCoefficients(c1);
+        // Create a vector to store the filter outputs
+        std::vector<float> filterVector;
 
-        float f1 =  filterList[0].processSingleSampleRaw(initial_mix);
-        //float f1 = filter1.processSingleSampleRaw(mix1);
-        //filterList[1].processSamples(  rightChannel, numSamples);
+        // Process samples with filters
+        filterVector.push_back(  filterList[0].processSingleSampleRaw( initial_mix ) );
+        filterVector.push_back(  filterList[1].processSingleSampleRaw( initial_mix ) );
 
-        //// FINAL MIXING ------------------------------------------
+        // =========== FINAL MIXING AND PANNING BEFORE REVERB ===========//
 
-        float masterRight{ (f1) / 2.0f };
-        float masterLeft{ (f1) / 2.0f };
+        // Make sure we have samples to work with
+        float filter_mix = 0.0f;
 
-        float modPan{ setModBoundary( modulatorList[1].make() , 0.1 , 0.9) };
+        // Mix the oscillator output
+        if (!filterVector.empty())
+        {
+            // Sum all the elements in the vector
+            float sum = 0.0f;
+            for (int i = 0; i < filterVector.size(); ++i)
+            {
+                sum += filterVector[i];
+            }
 
-        float panLeft = modPan;
-        float panRight = (1.0f - modPan);
+            // Divide the sum by the number of elements to get the mean
+            filter_mix = 0.8f * (sum / static_cast<float>(filterVector.size()));
+        }
+        else
+        {
+            // If the vector is empty, the mean is zero
+            filter_mix = 0.0f;
+        }
 
-        float finalGain = 2;
+        // Pass and final gain adjustment
+        float masterRight{ filter_mix };
+        float masterLeft{ filter_mix };
+
+        float panLeft = panMod;
+        float panRight = (1.0f - panMod);
+
+        float finalGain = 2.0f;
 
         leftChannel[i] = panLeft * masterLeft * finalGain;
         rightChannel[i] = panRight * masterRight * finalGain;
 
-
     }
     
-    ////// REVERB -----------------------------------
+    // =========== SETUP THE REVERB ===========//
 
     std::vector<float> dryLeft(numSamples);
     std::vector<float> dryRight(numSamples);
@@ -301,38 +362,28 @@ void Assignment_2AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
     }
 
 
-    ////// Apply the reverb to the samples
+    // Apply the reverb to the samples
 
     reverb1.processStereo(leftChannel, rightChannel, numSamples);
     reverb2.processStereo(leftChannel, rightChannel, numSamples);
 
-
     // Apply wet and dry modulation
     for (int i = 0; i < numSamples; ++i)
     {
-        float wetMod = setModBoundary(modulatorList[1].make(), 0.0f, 1.0f); // 0=dry, 1=fully wet
+        float wetMod = juce::jmap(modulatorList[1].make(),-1.0f, 1.0f, 0.0f, 1.0f); // 0 = dry, 1=fully wet
 
         leftChannel[i] = dryLeft[i] * (1.0f - wetMod) + leftChannel[i] * wetMod;
         rightChannel[i] = dryRight[i] * (1.0f - wetMod) + rightChannel[i] * wetMod;
     }
 
-    //// FINAL SAFETY
-    // We do this LAST to ensure that even if the reverb or filter 
-    // pushed the signal high, it is caught before leaving the plugin.
+
+    // =========== FINAL SAFETY CLIP ===========//
+    // Final check to ensure nothing clips
     for (int i = 0; i < numSamples; i++)
     {
         leftChannel[i] = softLimit(leftChannel[i]);
         rightChannel[i] = softLimit(rightChannel[i]);
     }
-
-    //// --- TEMPORARY STEREO TEST ---
-    //// Mute the right channel entirely
-    //for (int i = 0; i < numSamples; i++) {
-    //    rightChannel[i] = 0.0f;
-    //}
-
-
-
 
 }
 

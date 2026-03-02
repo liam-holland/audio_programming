@@ -10,8 +10,10 @@
 
 #include <JuceHeader.h>
 
+#include "Envelope.h"
+#include "OscillatorGroup.h"
 #include "Oscillator.h"
-#include "Filter.h"
+
 
 //==============================================================================
 /**
@@ -60,7 +62,7 @@ private:
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Assignment_2AudioProcessor)
     
-    juce::Random random;
+    //================= ADD GLOBAL VARIABLES HERE ========================//
 
     // Create a vector if vectors. Should change this into a class 
     std::vector<OscillatorGroup> oscillatorGroups;
@@ -71,30 +73,17 @@ private:
     // This will house all of the filters
     std::vector<juce::IIRFilter> filterList;
 
-
+    // Two reverbs is enough, so dont need a reverb bank
     juce::Reverb reverb1;
     juce::Reverb reverb2;
 
-
     int totalSamplesProcessed = 0;
 
-    juce::IIRFilter filter1;
-    juce::IIRFilter filter2;
-
-
-    float mix{ 0 };
-
-    float setModBoundary(float _modValue, float modFloor, float modCeiling)
-    {
-        float modMiddle = (modFloor + modCeiling) / 2.0f;
-        float modAmplitude = (modCeiling - modMiddle);
-
-        return (modAmplitude * _modValue) + modMiddle;
-    }
-
-
+    /**
+    Apply a soft limit to an input signal to avoid hard clipping
+    */
     float softLimit (float input) {
-        return std::tanh(input) * 0.8f;
+        return std::tanh(input) * 0.9f;
         };
 
 };

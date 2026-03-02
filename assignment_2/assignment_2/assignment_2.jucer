@@ -4,11 +4,10 @@
               addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1">
   <MAINGROUP id="ErhbAG" name="assignment_2">
     <GROUP id="{B8BECFEA-DBA5-1B2D-573A-D2DBDFE280B4}" name="Source">
-      <FILE id="vd8Duo" name="Delay.h" compile="0" resource="0" file="Source/Delay.h"/>
+      <FILE id="wquLSq" name="OscillatorGroup.h" compile="0" resource="0"
+            file="Source/OscillatorGroup.h"/>
+      <FILE id="KOX3ts" name="Envelope.h" compile="0" resource="0" file="Source/Envelope.h"/>
       <FILE id="AB7Gpw" name="Oscillator.h" compile="0" resource="0" file="Source/Oscillator.h"/>
-      <FILE id="qZsWnI" name="MattsAudioHeader.h" compile="0" resource="0"
-            file="Source/MattsAudioHeader.h"/>
-      <FILE id="jdsx1Y" name="Filter.h" compile="0" resource="0" file="Source/Filter.h"/>
       <FILE id="QiI6xx" name="PluginProcessor.cpp" compile="1" resource="0"
             file="Source/PluginProcessor.cpp"/>
       <FILE id="TG5frG" name="PluginProcessor.h" compile="0" resource="0"

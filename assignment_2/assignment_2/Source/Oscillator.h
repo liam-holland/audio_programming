@@ -1,183 +1,14 @@
 #define _USE_MATH_DEFINES
 
 #include <algorithm>
-#include <iostream>
 #include <cmath>
 #include <vector>
 #include <JuceHeader.h>
 
+#include "Envelope.h"
+
+
 #pragma once
-
-
-class Envelope
-{
-private:
-    float sampleRate{};
-    float attack{};
-    float decay{};
-    float sustain{};
-    float release{};
-
-    float start{};
-    float duration{};
-
-    int attackStart{ 0 };
-    int attackEnd{ 0 };
-
-    int decayStart{ 0 };
-    int decayEnd{ 0 };
-
-    int sustainStart{ 0 };
-    int sustainEnd{ 0 };
-
-    int releaseStart{ 0 };
-    int releaseEnd{ 0 };
-
-    //0-1, 1 - 0.8 , 0.8 - 0.8, 0.8 - 0
-    float attackDelta{ 0.0 };
-    float decayDelta{ 0.0 };
-    float sustainDelta{ 0.0 };
-    float releaseDelta{ 0.0 };
-
-    float envAmplitude{ 0.0 };
-    float delta{ 0.0 };
-
-
-public:
-
-    // Set the default behaviour
-    Envelope() : sampleRate(48000),
-        attack(0.01f),
-        decay(0.1f),
-        sustain(0.8f),
-        release(0.2f)
-    { 
-        setEnvelopeParameters();
-    }
-
-
-     /**
-     * @param _sampleRate_ Set the sample rate of the evnvelope
-     * @param _attack_ Set the attack time of the envelope
-     * @param _decay_ Set the decay time of the envelope
-     * @param _sustainLevel_ Set the sustain level (0.0 - 1.0 float)
-     * @param _release_ Set the release time after the oscillator ends
-     */
-    explicit Envelope(int _sampleRate_, float _attack_, float _decay_, float _sustainLevel_, float _release_)
-    {
-        setSampleRate(_sampleRate_);
-        setAttack(_attack_);
-        setDecay(_decay_);
-        setSustain(_sustainLevel_);
-        setRelease(_release_);
-
-        setEnvelopeParameters();
-    }
-
-    void setSampleRate(int _sampleRate)
-    {
-        sampleRate = _sampleRate;
-        setEnvelopeParameters();
-    }
-
-    void setAttack(float _attack)
-    {
-        attack = _attack;
-        setEnvelopeParameters();
-    }
-
-    void setDecay(float _decay)
-    {
-        decay = _decay;
-        setEnvelopeParameters();
-    }
-
-    void setSustain(float _sustain)
-    {
-        sustain = _sustain;
-        setEnvelopeParameters();
-    }
-
-    void setRelease(float _release)
-    {
-        release = _release;
-        setEnvelopeParameters();
-    }
-
-
-    void setAttackStart(int _attackStart)
-    {
-        attackStart = _attackStart;
-        setEnvelopeParameters();
-    }
-
-    void setSustainEnd(int _sustainEnd)
-    {
-        sustainEnd = _sustainEnd;
-        setEnvelopeParameters();
-    }
-
-
-    void setEnvelopeParameters()
-    {
-        /*attackStart =  0 ;*/
-        attackEnd = attackStart + static_cast<int>(sampleRate * attack);
-
-        decayStart = attackEnd + 1;
-        decayEnd = decayStart + static_cast<int>(sampleRate * decay);
-
-        sustainStart = decayEnd + 1;
-        //sustainEnd = sustainStart + static_cast<int>(sampleRate * (start + duration)) ;
-
-        releaseStart = sustainEnd + 1;
-        releaseEnd = releaseStart + static_cast<int>(sampleRate * release);
-
-        //0-1, 1 - 0.8 , 0.8 - 0.8, 0.8 - 0
-        attackDelta = 1.0 / (attackEnd - attackStart);
-        decayDelta = - (1.0 - sustain) / (decayEnd - decayStart);
-        sustainDelta = 0.0;
-        releaseDelta = -0.8 / (releaseEnd - releaseStart);
-    }
-
-    int getReleaseEnd()
-    {
-        return releaseEnd;
-    }
-
-    float processEnvelope(int _sample)
-    {
-        // Attack Phase (0.0 to 1.0)
-        if (_sample >= attackStart && _sample < attackEnd) {
-            float progress = static_cast<float>(_sample - attackStart) / (attackEnd - attackStart);
-            envAmplitude = progress; // Directly interpolate from 0 to 1
-        }
-        // Decay Phase (1.0 to 0.8)
-        else if (_sample >= decayStart && _sample < decayEnd) {
-            float progress = static_cast<float>(_sample - decayStart) / (decayEnd - decayStart);
-            // 1.0 down to 0.8
-            envAmplitude = 1.0f - (( 1 - sustain) * progress);
-        }
-        // Sustain Phase (Hold at 0.8)
-        else if (_sample >= sustainStart && _sample < sustainEnd) {
-            envAmplitude = 0.8f;
-        }
-        // Release Phase (0.8 to 0.0)
-        else if (_sample >= releaseStart && _sample < releaseEnd) {
-            float progress = static_cast<float>(_sample - releaseStart) / (releaseEnd - releaseStart);
-            // Lerp from 0.8 down to 0.0
-            envAmplitude = 0.8f - (sustain * progress);
-        }
-        // Note is fully finished
-        else {
-            envAmplitude = 0.0f;
-        }
-
-        return envAmplitude;
-    }
-
-};
-
-
 
 
 class Oscillator
@@ -314,7 +145,7 @@ public:
     }
 
 
-    // We now move to variables that car cacluated from our initialiation
+    // We now move to variables that are cacluated from our initialiation
 
     // First sample
     void setStartSample()
@@ -346,6 +177,10 @@ public:
         phaseDelta = frequency / sampleRate;
     }
 
+    void setPhaseShift( float _phaseShift)
+    {
+        phaseShift = _phaseShift;
+    }
 
     void phaseIncrement()
     {
@@ -355,6 +190,8 @@ public:
         if (phase > 1.0)
             phase -= 1.0;
     }
+
+    
 
     // Process the oscillators
 
@@ -387,6 +224,8 @@ public:
         {
             return processPink();
         }
+
+        return 0.0f;
     }
 
     void setEnvelope(int _sampleRate_, float _attack_, float _decay_, float _sustain_, float _release_)
@@ -420,18 +259,17 @@ public:
 
     float processSin()
     {
+        
+        sampleValue = amplitude * sin(2 * 3.14159265358979323846 * (phase + phaseShift));
+
         phaseIncrement();
-
-        sampleValue = amplitude * sin(2 * 3.14159265358979323846 * phase);
-
-        //sampleValue = amplitude*sin(2*M_PI*phase);
 
         return sampleValue;
     }
 
     float processSquare()
     {
-        phaseIncrement();
+        
 
         if (phase > 0.5) {
             sampleValue = 1;
@@ -440,24 +278,28 @@ public:
             sampleValue = -1;
         }
 
+        phaseIncrement();
+
         return amplitude*sampleValue;
     }
 
     float processTriangle() {
 
-        phaseIncrement();
 
-        sampleValue = 2*(fabs(phase - 0.5)-0.25);
+        sampleValue = 4*(fabs( (phase + phaseShift)  - 0.5)-0.25);
+
+        phaseIncrement();
 
         return amplitude*sampleValue;
     }
 
     float processSaw()
     {
+ 
+        sampleValue = (phase + phaseShift);
         phaseIncrement();
-
-        sampleValue = phase;
         return amplitude * sampleValue;
+        
     }
 
     float processWhite()
@@ -499,20 +341,23 @@ public:
 
 
 private:
-    int oscID{};
-    float start{};
-    float duration{};
-    float frequency{};
-    std::string shape{};
-    float amplitude{};
 
 
-    int sampleRate{};
-    int firstSample{};
-    int lastSample{};
+    float start{ 0.0f };
+    float duration{ 180.0f };
+    float frequency{ 440.0f };
+    std::string shape{"sin"};
+    float amplitude{ 0.5f };
+
+
+    int sampleRate{ 48000 };
+    int firstSample{0};
+    int lastSample{0};
     float phase{0};
-    float phaseDelta{};
-    float sampleValue{};
+    float phaseDelta{0};
+    float sampleValue{0};
+
+    float phaseShift{ 0.0f };
 
     bool isActive{ false };
     juce::Random random;
@@ -536,84 +381,5 @@ private:
 };
 
 
-class OscillatorGroup
-{
-private:
-
-    std::vector<Oscillator> oscGroup;
-
-public:
-
-    //Return the oscillator index
-    Oscillator& operator[](size_t index)
-    {
-        return oscGroup[index];
-    }
-
-    const Oscillator& operator[](size_t index) const
-    {
-        return oscGroup[index];
-    }
-
-    void clear()
-    {
-        oscGroup.clear();
-    }
-
-    void addOscillator(Oscillator _osc)
-    {
-        oscGroup.emplace_back(_osc);
-    }
-
-    void setStartAll(float _start)
-    {
-        for (int o = 0; o < oscGroup.size(); o++)
-        {
-
-            oscGroup[o].setStart(_start);
-            oscGroup[o].setStartSample();
-
-        }
-    }
-
-    void setDurationAll(float _duration)
-    {
-        for (int o = 0; o < oscGroup.size(); o++)
-        {
-
-            oscGroup[o].setDuration(_duration);
-            oscGroup[o].setLastSample();
-
-        }
-    }
-
-    void setEnvelopeAll(float _sampleRate, float _attackTime, float _decayTime, float _sustainLevel, float _releaseTime)
-    {
-        for (int o = 0; o < oscGroup.size(); o++)
-        {
-
-            oscGroup[o].setEnvelope( _sampleRate, _attackTime , _decayTime , _sustainLevel , _releaseTime);
-
-        }
-    }
-
-
-    float processOscList()
-    {
-        float mix{ 0.0f };
-
-        for (int o = 0; o < oscGroup.size(); o++)
-        {
-
-            mix += oscGroup[o].make();
-
-        }
-
-        mix = 0.5f * (mix / (oscGroup.size()));
-
-        return mix;
-    }
-
-};
 
 
