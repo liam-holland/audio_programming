@@ -61,7 +61,7 @@ void Assignment_2AudioProcessor::prepareToPlay(double sampleRate, int samplesPer
     group1.addOscillator(Oscillator(sampleRate, 0.0f, 0.0f, 60.0f, "saw", 0.4f));
     group1.addOscillator(Oscillator(sampleRate, 0.0f, 0.0f, 62.0f, "triangle", 0.3f));
     group1.addOscillator(Oscillator(sampleRate, 0.0f, 0.0f, 55.0f, "sin", 0.5f));
-    group1.setStartAll(0.0f);
+    group1.setStartAll(25.0f);
     group1.setDurationAll(180.0f);
     group1.setEnvelopeAll(sampleRate, 5, 0.3, 0.8, 5);
     oscillatorGroups.push_back(group1);
@@ -286,7 +286,7 @@ void Assignment_2AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
         float sigmoid = std::tanh(intensity * rawHighPass) / std::tanh(intensity);
 
         // Can use jmap to set the boundaries of the modulator
-        float highPassMod = juce::jmap(sigmoid, -1.0f, 1.0f, 1.0f, 6000.0f);
+        float highPassMod = juce::jmap(sigmoid, -1.0f, 1.0f, 1.0f, 8000.0f);
 
         // Notch filter
         float peakMod = juce::jmap(modulatorList[4].make(), -1.0f, 1.0f, 1000.0f, 6000.0f);
@@ -343,7 +343,7 @@ void Assignment_2AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
         float panLeft = panMod;
         float panRight = (1.0f - panMod);
 
-        float finalGain = 2.0f;
+        float finalGain = 4.0f;
 
         leftChannel[i] = panLeft * masterLeft * finalGain;
         rightChannel[i] = panRight * masterRight * finalGain;
