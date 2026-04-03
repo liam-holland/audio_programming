@@ -10,3 +10,4 @@ cmake-build-*/
 /assignment_2/assignment_2/Builds
 JuceLibraryCode
 Builds
+*.wav

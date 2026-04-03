@@ -175,7 +175,7 @@ void week7_delayLines::processBlock(juce::AudioBuffer<float>& buffer, juce::Midi
 
     // -------------------------------------------//
     // START TINKERING FROM HERE
-    // -------------------------------------------//
+    // -------------------------------------------/
 
     int numSamples{ buffer.getNumSamples() };
     auto* leftChannel{ buffer.getWritePointer(0) };
