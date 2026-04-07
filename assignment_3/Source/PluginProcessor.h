@@ -9,6 +9,13 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include <fstream>
+#include <random>
+
+#include "Ball.h"
+#include "FileLoader.h"
+
+
 
 //==============================================================================
 /**
@@ -56,4 +63,36 @@ public:
 private:
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Assignment_3AudioProcessor)
+
+    Ball testBall;
+
+    std::ofstream file{ "ball_test.csv" };
+
+    int sample{ 0 };
+
+    FileLoader fileLoader;
+
+    juce::AudioBuffer<float> sampleBuffer{};
+
+    int initialSampleLength{ 0 };
+
+    int grainSize{ 2048 };
+
+    int randomNumber{ 0 };
+
+    // For creating random numbers
+    std::mt19937 gen; 
+
+    int bufferStartSample = 0;
+
+    Ball::BallState state{ 1.0f , 0.0f };
+
+    int playForwards{ 1 };
+
+    int startOrEnd = 0;
+
+    // For changing speed
+
+    float speed = 1.0f; // <--- your speed control
+
 };

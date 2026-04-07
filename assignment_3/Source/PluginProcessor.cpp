@@ -8,6 +8,7 @@
 
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include <random>
 
 //==============================================================================
 Assignment_3AudioProcessor::Assignment_3AudioProcessor()
@@ -22,11 +23,164 @@ Assignment_3AudioProcessor::Assignment_3AudioProcessor()
                        )
 #endif
 {
+
+    std::random_device rd;
+    gen = std::mt19937(rd());
+
+    // Load the binary of a file into the sampleBuffer
+    fileLoader.loadIntoAudioBuffer( BinaryData::HarpA4_wav, BinaryData::HarpA4_wavSize, sampleBuffer);
+
+
 }
 
 Assignment_3AudioProcessor::~Assignment_3AudioProcessor()
 {
 }
+
+//==============================================================================
+// PREPARE TO PLAY AND PROCESS BLOCK//
+
+void Assignment_3AudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
+{
+    // Use this method as the place to do any pre-playback
+    // initialisation that you need..
+
+    testBall.prepare(sampleRate);
+
+}
+
+void Assignment_3AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
+{
+    juce::ScopedNoDenormals noDenormals;
+    auto totalNumInputChannels = getTotalNumInputChannels();
+    auto totalNumOutputChannels = getTotalNumOutputChannels();
+
+
+    // Clears any output channels that didn't contain input data
+    for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
+        buffer.clear(i, 0, buffer.getNumSamples());
+
+    // Create a stereo output
+    auto* leftChannel = buffer.getWritePointer(0);
+    auto* rightChannel = buffer.getWritePointer(1);
+
+    // If the buffer is empty, don't process!
+    if (sampleBuffer.getNumSamples() == 0)
+        return;
+
+    // Number of samples in buffer
+    int numSamples{ buffer.getNumSamples() };    
+
+    initialSampleLength = sampleBuffer.getNumSamples();
+    int maxGrainIndex = (initialSampleLength / numSamples) - 1;
+    if (maxGrainIndex < 0) maxGrainIndex = 0;
+
+    // Randomise the current grain start
+    //std::uniform_int_distribution<> dist(0, maxGrainIndex);
+    //int currentGrainStart = dist(gen) * numSamples;
+
+    int currentGrainStart = (maxGrainIndex * numSamples);
+
+    // Find the minimum amount of input  and output channels
+    int channelsToCopy = std::min(totalNumOutputChannels, sampleBuffer.getNumChannels());
+
+    //Channel number
+    int channelNumber{ 0 };
+
+    if (channelsToCopy == 2) //Check if input is stereo or mono
+    {
+        channelNumber = 1;
+    }
+    else
+    {
+        channelNumber = 0; //If the output channel, is greater than the input, make it mono
+    }
+
+    // Values that are going to be smoothed to avoid clicks
+    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothedValueLeft;
+    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothedValueRight;
+
+    // Number of samples to get to target value
+    int N = 8;
+
+    smoothedValueLeft.reset(N);
+    smoothedValueRight.reset(N);
+
+    // Use the veolcity direction to play forwards or backwards
+    if (state.velocity > 0)
+    {
+        playForwards = 1;
+        startOrEnd = 0;
+    }
+    else
+    {
+        playForwards = -1;
+        startOrEnd = buffer.getNumSamples();
+    }
+
+    // The starting position of the sample buffer
+    bufferStartSample = floor(currentGrainStart * (1 - state.position));
+
+    // Values that we are going to slowly move towards
+    int readPosN = bufferStartSample + startOrEnd + (N * playForwards);
+    float valueLeftN = sampleBuffer.getSample(0, readPosN);
+    float valueRightN = sampleBuffer.getSample(channelNumber, readPosN);
+    smoothedValueLeft.setTargetValue(valueLeftN);
+    smoothedValueRight.setTargetValue(valueRightN);
+
+    for (int i = 0; i < numSamples; i++)
+    {
+
+        // Move the ball
+        state = testBall.processMovement();
+
+        float readPositionFloat = initialSampleLength * (1-state.position);
+        int readPosition = floor(initialSampleLength * (1-state.position));
+
+        // Update the reader using fractional interpolation
+        //float readPosFloat = bufferStartSample + startOrEnd + (i * playForwards * speed);
+        //int readPos = bufferStartSample + startOrEnd + (i * playForwards * speed);
+
+        int index0 = (int)readPositionFloat;
+        int index1 = index0 + 1;
+        float frac = readPositionFloat - index0;
+
+        float sample0L = sampleBuffer.getSample(0, index0);
+        float sample1L = sampleBuffer.getSample(0, index1);
+
+        float sample0R = sampleBuffer.getSample(channelNumber, index0);
+        float sample1R = sampleBuffer.getSample(channelNumber, index1);
+
+        float valueLeftI = sample0L + frac * (sample1L - sample0L);
+        float valueRightI = sample0R + frac * (sample1R - sample0R);
+
+        leftChannel[i] = valueLeftI;
+        rightChannel[i] = valueRightI;
+
+
+        //if ( i < N && (readPosition < initialSampleLength))
+        //{
+        //    leftChannel[i] = smoothedValueLeft.getNextValue();
+        //    rightChannel[i] = smoothedValueRight.getNextValue();
+        //}
+        //else if ( i >=N && (readPosition < initialSampleLength))
+        //{
+        //    leftChannel[i] = valueLeftI;
+        //    rightChannel[i] = valueRightI;
+        //}
+        //else
+        //{
+        //    leftChannel[i] = 0.0f;
+        //    rightChannel[i] = 0.0f;
+        //}
+
+
+    }
+
+
+}
+
+
 
 //==============================================================================
 const juce::String Assignment_3AudioProcessor::getName() const
@@ -91,11 +245,7 @@ void Assignment_3AudioProcessor::changeProgramName (int index, const juce::Strin
 }
 
 //==============================================================================
-void Assignment_3AudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
-{
-    // Use this method as the place to do any pre-playback
-    // initialisation that you need..
-}
+
 
 void Assignment_3AudioProcessor::releaseResources()
 {
@@ -129,34 +279,6 @@ bool Assignment_3AudioProcessor::isBusesLayoutSupported (const BusesLayout& layo
 }
 #endif
 
-void Assignment_3AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
-{
-    juce::ScopedNoDenormals noDenormals;
-    auto totalNumInputChannels  = getTotalNumInputChannels();
-    auto totalNumOutputChannels = getTotalNumOutputChannels();
-
-    // In case we have more outputs than inputs, this code clears any output
-    // channels that didn't contain input data, (because these aren't
-    // guaranteed to be empty - they may contain garbage).
-    // This is here to avoid people getting screaming feedback
-    // when they first compile a plugin, but obviously you don't need to keep
-    // this code if your algorithm always overwrites all the output channels.
-    for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
-        buffer.clear (i, 0, buffer.getNumSamples());
-
-    // This is the place where you'd normally do the guts of your plugin's
-    // audio processing...
-    // Make sure to reset the state if your inner loop is processing
-    // the samples and the outer loop is handling the channels.
-    // Alternatively, you can process the samples with the channels
-    // interleaved by keeping the same state.
-    for (int channel = 0; channel < totalNumInputChannels; ++channel)
-    {
-        auto* channelData = buffer.getWritePointer (channel);
-
-        // ..do something to the data...
-    }
-}
 
 //==============================================================================
 bool Assignment_3AudioProcessor::hasEditor() const

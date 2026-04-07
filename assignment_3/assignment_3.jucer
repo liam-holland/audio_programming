@@ -4,7 +4,26 @@
               addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1">
   <MAINGROUP id="mneCbL" name="assignment_3">
     <GROUP id="{36EC3B0B-22EE-4237-6F6C-F9AB6B8F7068}" name="Source">
-      <GROUP id="{8187430E-D829-8413-241B-608CD14BE640}" name="audio_files_"/>
+      <FILE id="gpPNLO" name="FileLoader.h" compile="0" resource="0" file="Source/FileLoader.h"/>
+      <FILE id="yLPVkb" name="Ball.h" compile="0" resource="0" file="Source/Ball.h"/>
+      <GROUP id="{33483112-6404-05AF-1DF3-B0863E32C8D9}" name="audio_files">
+        <FILE id="yTIqiW" name="808_0_kick.wav" compile="0" resource="1" file="Source/audio_files/808_0_kick.wav"/>
+        <FILE id="pR9ZRw" name="808_1_snare.wav" compile="0" resource="1" file="Source/audio_files/808_1_snare.wav"/>
+        <FILE id="EZfpwx" name="808_2_hh.wav" compile="0" resource="1" file="Source/audio_files/808_2_hh.wav"/>
+        <FILE id="lTbx0a" name="808_3_ohh.wav" compile="0" resource="1" file="Source/audio_files/808_3_ohh.wav"/>
+        <FILE id="tX8DNe" name="808_4_tom.wav" compile="0" resource="1" file="Source/audio_files/808_4_tom.wav"/>
+        <FILE id="fk84Lo" name="808_5_clap.wav" compile="0" resource="1" file="Source/audio_files/808_5_clap.wav"/>
+        <FILE id="veDYTx" name="808_6_snare2.wav" compile="0" resource="1"
+              file="Source/audio_files/808_6_snare2.wav"/>
+        <FILE id="z16uqL" name="drumLoop_stereo.wav" compile="0" resource="1"
+              file="Source/audio_files/drumLoop_stereo.wav"/>
+        <FILE id="hRcxXv" name="drumming.wav" compile="0" resource="1" file="Source/audio_files/drumming.wav"/>
+        <FILE id="xQBbo4" name="Harp-A4.wav" compile="0" resource="1" file="Source/audio_files/Harp-A4.wav"/>
+        <FILE id="psxrmV" name="Marimba-C3-80.wav" compile="0" resource="1"
+              file="Source/audio_files/Marimba-C3-80.wav"/>
+        <FILE id="BJU29S" name="redhot.wav" compile="0" resource="1" file="Source/audio_files/redhot.wav"/>
+        <FILE id="PA2bV8" name="rokia.wav" compile="0" resource="1" file="Source/audio_files/rokia.wav"/>
+      </GROUP>
       <FILE id="mE68bV" name="PluginProcessor.cpp" compile="1" resource="0"
             file="Source/PluginProcessor.cpp"/>
       <FILE id="YV1atN" name="PluginProcessor.h" compile="0" resource="0"
