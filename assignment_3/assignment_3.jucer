@@ -31,6 +31,7 @@
       <FILE id="Bhdt7e" name="PluginEditor.cpp" compile="1" resource="0"
             file="Source/PluginEditor.cpp"/>
       <FILE id="e95uz3" name="PluginEditor.h" compile="0" resource="0" file="Source/PluginEditor.h"/>
+      <FILE id="m6henb" name="BallSample.h" compile="0" resource="0" file="Source/BallSample.h"/>
     </GROUP>
   </MAINGROUP>
   <MODULES>

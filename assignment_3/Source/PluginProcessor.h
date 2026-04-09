@@ -14,7 +14,7 @@
 
 #include "Ball.h"
 #include "FileLoader.h"
-
+//#include "BallSample.h"
 
 
 //==============================================================================
@@ -64,35 +64,69 @@ private:
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Assignment_3AudioProcessor)
 
+    // Balls
     Ball testBall;
+    Ball testBall1;
+    Ball testBall2;
+    Ball testBall3;
 
-    std::ofstream file{ "ball_test.csv" };
-
-    int sample{ 0 };
-
+    // Initlialise file loader
     FileLoader fileLoader;
 
+    // Create an audio buffer
     juce::AudioBuffer<float> sampleBuffer{};
+
 
     int initialSampleLength{ 0 };
 
-    int grainSize{ 2048 };
-
-    int randomNumber{ 0 };
-
-    // For creating random numbers
-    std::mt19937 gen; 
-
-    int bufferStartSample = 0;
-
-    Ball::BallState state{ 1.0f , 0.0f };
-
-    int playForwards{ 1 };
-
-    int startOrEnd = 0;
-
     // For changing speed
+    float speed = 1.0f;
 
-    float speed = 1.0f; // <--- your speed control
+    Ball::BallState state{ 1.0f, 0.0f };
+    Ball::BallState state1{ 1.0f, 0.0f };
+    Ball::BallState state2{ 1.0f, 0.0f };
+    Ball::BallState state3{ 1.0f, 0.0f };
+
+    int grainStartSample{ 0 };
+    int grainEndSample{ 1 };
+    int grainLength{ 0 };
+
+    int grainReadPos{ 0 };
+
+    float maxGrainLength{ 0.3 };
+    int maxGrainSamples{ 0 };
+
+    bool isGrainPlaying{ false };
+
+
+    // Taken from https://stackoverflow.com/questions/1125666/how-do-you-do-bicubic-or-other-non-linear-interpolation-of-re-sampled-audio-da
+    
+    /**
+    * x0 - first sample before
+    * x1 - first sample after
+    * x2 - 2ns sample after
+    * x3 - 3rd sample after
+    */ 
+    //float InterpolateHermite4pt3oX(float x0, float x1, float x2, float x3, float t)
+    //{
+    //    float c0 = x1; 
+    //    float c1 = 0.5F * (x2 - x0);
+    //    float c2 = x0 - (2.5F * x1) + (2 * x2) - (.5F * x3);
+    //    float c3 = (.5F * (x3 - x0)) + (1.5F * (x1 - x2));
+    //    return (((((c3 * t) + c2) * t) + c1) * t) + c0;
+    //}
+
+    //int grainSize{ 2048 };
+
+    //int randomNumber{ 0 };
+
+    //// For creating random numbers
+    //std::mt19937 gen; 
+
+    //int bufferStartSample = 0;
+
+    //int playForwards{ 1 };
+
+    //int startOrEnd = 0;
 
 };
