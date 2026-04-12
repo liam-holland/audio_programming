@@ -29,7 +29,7 @@ Assignment_3AudioProcessor::Assignment_3AudioProcessor()
     //gen = std::mt19937(rd());
 
     // Load the binary of a file into the sampleBuffer
-    fileLoader.loadIntoAudioBuffer( BinaryData::drumming_wav, BinaryData::drumming_wavSize, sampleBuffer);
+    fileLoader.loadIntoAudioBuffer( BinaryData::Cath_short_clip_wav, BinaryData::Cath_short_clip_wavSize, sampleBuffer);
 
 }
 
@@ -46,38 +46,76 @@ void Assignment_3AudioProcessor::prepareToPlay(double sampleRate, int samplesPer
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
 
-    maxGrainSamples = (int)(maxGrainLength * sampleRate);
-
     // Initiliase the balls with the sample rate
     testBall.prepare(sampleRate);
     testBall1.prepare(sampleRate);
     testBall2.prepare(sampleRate);
     testBall3.prepare(sampleRate);
 
-    // Ball 0: The "Foundation" (Slow, wide ambient sweeps)
-    testBall.setAcceleration( 1.0f , -9.0f);
-    testBall.setLoss( 0.001f ,0.01f );    // Very low loss so it moves for a long time
-    testBall.setStartPosition( 0.0f , 1.0f);
-    testBall.setStartVelocity( 1.0f , -1.0f);
+
+    // Ball 0
+    testBall.setAcceleration( 0.001f , -5.0f);
+    testBall.setLoss( 0.01f ,0.01f );
+    testBall.setStartPosition( 0.01f , 1.0f);
+    testBall.setStartVelocity( 1.0f , -4.0f);
     testBall.solveMaxVelocity();
 
-    //// Ball 1: The "Heartbeat" (Steady rhythmic pulse)
-    //testBall1.setGravity(-0.4f);
-    //testBall1.setLoss(0.01f);
-    //testBall1.setStartPosition(0.5f);
-    //testBall1.setStartVelocity(1.0f);
+    // Ball 1
+    testBall1.setAcceleration(0.0f, -1.0f);
+    testBall1.setLoss(0.01f, 0.01f);
+    testBall1.setStartPosition(0.02f, 0.99f);
+    testBall1.setStartVelocity(1.0f, -6.0f);
+    testBall1.solveMaxVelocity();
 
-    //// Ball 2: The "Glitch" (Fast, chaotic "chirps" and flutters)
-    //testBall2.setGravity(-1.6f);
-    //testBall2.setLoss(0.05f);    // Higher loss so it settles into a rhythm faster
-    //testBall2.setStartPosition(0.2f);
-    //testBall2.setStartVelocity(2.0f);
+    // Ball 1
+    testBall2.setAcceleration(0.0f, -10.0f);
+    testBall2.setLoss(0.01f, 0.03f);
+    testBall2.setStartPosition(0.04f, 0.99f);
+    testBall2.setStartVelocity(0.75f, -10.0f);
+    testBall2.solveMaxVelocity();
 
-    //// Ball 3: The "Accent" (Short-lived, high-energy bounces)
-    //testBall3.setGravity(-0.1f);
-    //testBall3.setLoss(0.1f);     // High loss causes it to die out musically
-    //testBall3.setStartPosition(0.8f);
-    //testBall3.setStartVelocity(0.0f);
+    //Grains per ball
+    int grainsPerBall{ 16 };
+
+    //Grains initialisation
+    grains.resize(grainsPerBall);
+    grains1.resize(grainsPerBall);
+    grains2.resize(grainsPerBall);
+
+    for ( auto & g: grains)
+    {
+        g.setSampleRate(sampleRate);
+        g.setMinandMax(0.1f, 1.0f, 0.3f);
+    }
+
+    for (auto& g : grains1)
+    {
+        g.setSampleRate(sampleRate);
+        g.setMinandMax(0.3f, 3.0f, 1.0f);
+    }
+
+    for (auto& g : grains2)
+    {
+        g.setSampleRate(sampleRate);
+        g.setMinandMax(1.4f, 6.0f, 3.0f);
+    }
+
+    reverbParams.roomSize = 0.8f;
+    reverbParams.wetLevel = 0.3f;
+    reverbParams.dryLevel = 0.7f;
+    reverbParams.width = 1.0f;
+
+    reverb.setParameters(reverbParams);
+
+
+    ////Grain 0
+    //grain.setSampleRate(sampleRate);
+    //grain.setMinandMax(0.02f, 0.3f);
+
+    ////Grain 1
+    //grain1.setSampleRate(sampleRate);
+    //grain1.setMinandMax(0.1f, 1.0f);
+
 
 }
 
@@ -100,68 +138,113 @@ void Assignment_3AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
         return;
 
     // Number of samples in buffer
-    int numSamples{ buffer.getNumSamples() };    
-
-    initialSampleLength = sampleBuffer.getNumSamples();
+    int numSamples{ buffer.getNumSamples() };
+    int sampleBufferSamples{ sampleBuffer.getNumSamples() };
 
     for (int i = 0; i < numSamples; i++)
     {
 
-        //Need to add edge detection to stop the buzzing
+        Ball::BallState state = testBall.processMovement();
+        Ball::BallState state1 = testBall1.processMovement();
+        Ball::BallState state2 = testBall2.processMovement();
 
-        // Move the ball
-        state = testBall.processMovement();
-        bool triggerPressed = state.triggerY;
-
-        // See if the trigger has been pressed
-        if (state.triggerY && !isGrainPlaying)
+        // Assign a grain
+        if (state.triggerY)
         {
-            isGrainPlaying = true;
-            grainReadPos = 0;
+            for (auto& g : grains)
+            {
+                if (!g.getGrainPlayState())
+                {
+                    g.checkForTrigger(state, sampleBufferSamples);
+                    break;
+                }
+            }
+        }
 
-            // Get the current sample
-            float playBackX = (state.xPosition);
-
-            grainStartSample = (int)floor(playBackX * initialSampleLength);;
-
-            float velocityPercent = abs(state.yVelocity) / abs(state.yMaxVelocity);
-            grainLength = juce::jlimit(512, maxGrainSamples, (int)(velocityPercent * maxGrainSamples)); //Choose the length of the grain
-            grainEndSample = juce::jlimit(grainStartSample, initialSampleLength, grainStartSample + grainLength); //The last sample of the grain
-
-
+        // Assign a grain
+        if (state1.triggerY)
+        {
+            for (auto& g : grains1)
+            {
+                if (!g.getGrainPlayState())
+                {
+                    g.checkForTrigger(state1, sampleBufferSamples);
+                    break;
+                }
+            }
         }
 
 
-
-        // Fill sample if the state is "ON"
-        if (isGrainPlaying)
+        // Assign a grain
+        if (state2.triggerY)
         {
-            float phase = (float)grainReadPos / (float)grainLength;
-            phase = juce::jlimit(0.0f, 1.0f, phase);
-            float envValue = 0.5f * (1.0f - cos(2.0f * juce::MathConstants<float>::pi * phase));
-
-            int currentGrainIDX = grainStartSample + grainReadPos;
-
-            if (currentGrainIDX < initialSampleLength && currentGrainIDX < grainEndSample)
+            for (auto& g : grains2)
             {
-
-                float sampleL = sampleBuffer.getSample(0, currentGrainIDX);
-                float sampleR = sampleBuffer.getSample(sampleBuffer.getNumChannels() > 1 ? 1 : 0, currentGrainIDX);
-
-                leftChannel[i] += sampleL * envValue;
-                rightChannel[i] += sampleR * envValue;
-
-                grainReadPos++;
+                if (!g.getGrainPlayState())
+                {
+                    g.checkForTrigger(state2, sampleBufferSamples);
+                    break;
+                }
             }
-
-            if ( grainReadPos >= grainLength )
-            {
-                isGrainPlaying = false;
-            }
-
-
         }
 
+        float mixL = 0.0f;
+        float mixR = 0.0f;
+
+        //Mix all of the grains
+        for (auto& g : grains)
+        {
+            auto out = g.grainOutput(sampleBuffer, sampleBufferSamples);
+            mixL += out.left;
+            mixR += out.right;
+        }
+
+        float mixL1 = 0.0f;
+        float mixR1 = 0.0f;
+
+        //Mix all of the grains
+        for (auto& g : grains1)
+        {
+            auto out = g.grainOutput(sampleBuffer, sampleBufferSamples);
+            mixL1 += out.left;
+            mixR1 += out.right;
+        }
+
+        float mixL2 = 0.0f;
+        float mixR2 = 0.0f;
+
+        //Mix all of the grains
+        for (auto& g : grains2)
+        {
+            auto out = g.grainOutput(sampleBuffer, sampleBufferSamples);
+            mixL2 += out.left;
+            mixR2 += out.right;
+        }      
+
+
+        leftChannel[i] += 0.6f*( mixL + mixL1 + mixL2);
+        rightChannel[i] += 0.6f*( mixR + mixR1 + mixL2);
+
+
+    }
+
+
+    reverb.processStereo(leftChannel, rightChannel, numSamples);
+    
+
+        //grain.checkForTrigger( state, sampleBufferSamples );
+        //Grain::grainStruct grainOut = grain.grainOutput( sampleBuffer, sampleBufferSamples);
+
+        //leftChannel[i] += grainOut.left;
+        //rightChannel[i] += grainOut.right;
+
+        //grain1.checkForTrigger(state1, sampleBufferSamples);
+        //Grain::grainStruct grainOut1 = grain1.grainOutput( sampleBuffer, sampleBufferSamples);
+
+        //leftChannel[i] += grainOut1.left;
+        //rightChannel[i] += grainOut1.right;
+
+}
 
 
     //// Values that are going to be smoothed to avoid clicks
@@ -174,102 +257,8 @@ void Assignment_3AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
     //smoothedValueLeft.reset(N);
     //smoothedValueRight.reset(N);
 
-    //// Use the veolcity direction to play forwards or backwards
-    //if (state.velocity > 0)
-    //{
-    //    playForwards = 1;
-    //    startOrEnd = 0;
-    //}
-    //else
-    //{
-    //    playForwards = -1;
-    //    startOrEnd = buffer.getNumSamples();
-    //}
-
-    //// The starting position of the sample buffer
-    //bufferStartSample = floor(currentGrainStart * (1 - state.position));
-
-    // Values that we are going to slowly move towards
-    //int readPosN = bufferStartSample + startOrEnd + (N * playForwards);
-    //float valueLeftN = sampleBuffer.getSample(0, readPosN);
-    //float valueRightN = sampleBuffer.getSample(channelNumber, readPosN);
     //smoothedValueLeft.setTargetValue(valueLeftN);
     //smoothedValueRight.setTargetValue(valueRightN);
-
-    
-
-        //else //If the state is off, the everything is zero
-        //{
-        //    leftChannel[i] += 0;
-        //    rightChannel[i] += 0;
-        //}
-
-
-        //if (state.triggerPlayingY && state.On)
-        //{
-        //    state.On = false;
-        //    state.Off = true;
-        //    state.triggerPlayingX = false;
-        //}
-
-
-        //state1 = testBall1.processMovement();
-        //state2 = testBall2.processMovement();
-        //state3 = testBall3.processMovement();
-
-        
-        //float playBack1 = (1.0f - state1.position);
-        //float playBack2 = (1.0f - state2.position);
-        //float playBack3 = (1.0f - state3.position);
-
-        //Sample that the xdirection is on
-       
-
-
-
-
-        // I want velocity of the grain to be related to the amplitude of the output
-
-
-        //lr_Output ballOut = processSamples(sampleBuffer, initialSampleLength, playBack, channelNumber, state);
-        //lr_Output ballOut1 = processSamples(sampleBuffer, initialSampleLength, playBack1, channelNumber, state1);
-        //lr_Output ballOut2 = processSamples(sampleBuffer, initialSampleLength, playBack2, channelNumber, state2);
-        //lr_Output ballOut3 = processSamples(sampleBuffer, initialSampleLength, playBack3, channelNumber, state3);
-
-
-        //// Update the reader using fractional interpolation
-        ////float readPosFloat = bufferStartSample + startOrEnd + (i * playForwards * speed);
-        ////int readPos = bufferStartSample + startOrEnd + (i * playForwards * speed);
-      
-
-        //// Ball 0: Far Left, Ball 1: Mid Left, Ball 2: Mid Right, Ball 3: Far Right
-        //float mix = 30.0f;
-        //leftChannel[i] = (ballOut.L_out * 1.0f + ballOut1.L_out * 0.7f + ballOut2.L_out * 0.3f + ballOut3.L_out * 0.1f) * mix;
-        //rightChannel[i] = (ballOut.R_out * 0.1f + ballOut1.R_out * 0.3f + ballOut2.R_out * 0.7f + ballOut3.R_out * 1.0f) * mix;
-
-
-        //if ( i < N && (readPosition < initialSampleLength))
-        //{
-        //    leftChannel[i] = smoothedValueLeft.getNextValue();
-        //    rightChannel[i] = smoothedValueRight.getNextValue();
-        //}
-        //else if ( i >=N && (readPosition < initialSampleLength))
-        //{
-        //    leftChannel[i] = valueLeftI;
-        //    rightChannel[i] = valueRightI;
-        //}
-        //else
-        //{
-        //    leftChannel[i] = 0.0f;
-        //    rightChannel[i] = 0.0f;
-        //}
-
-
-    }
-    
-
-}
-
 
 
 //==============================================================================

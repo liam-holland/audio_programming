@@ -30,10 +30,10 @@ public:
         bool triggerY;
     };
 
-    void setAcceleration(float _gravity , float _push)
+    void setAcceleration(float _accelerationX, float _accelerationY )
     {
-        push = _push;
-        gravity = _gravity;
+        accelerationX = _accelerationX;
+        accelerationY = _accelerationY;
         
     }
 
@@ -61,8 +61,8 @@ public:
         float maxDist = 1.0f;
 
         // Use absolute values to ensure I never sqrt a negative number
-        maxVelocityX = std::sqrt( std::pow(xVelocity, 2) + 2 * std::abs(push) * maxDist);
-        maxVelocityY = std::sqrt (std::pow(yVelocity, 2) + 2 * std::abs(gravity) * maxDist);
+        maxVelocityX = std::sqrt( std::pow(xVelocity, 2) + 2 * std::abs(accelerationX) * maxDist);
+        maxVelocityY = std::sqrt (std::pow(yVelocity, 2) + 2 * std::abs(accelerationY) * maxDist);
     }
 
     // Call this in your processor's prepareToPlay 
@@ -79,14 +79,18 @@ public:
 
     void updateVelocity()
     {
-        // Inside updateVelocity()
-        if (std::abs(yPosition) > 0.001f || std::abs(yVelocity) > 0.01f) {
-            yVelocity += (gravity * timeStep);
-        }
 
-        if (std::abs(xPosition) > 0.001f || std::abs(xVelocity) > 0.01f) {
-            xVelocity += (push * timeStep);
-        }
+        yVelocity += accelerationY * timeStep;
+        xVelocity += accelerationX * timeStep;
+
+        // Inside updateVelocity()
+        //if (std::abs(yPosition) > 0.001f || std::abs(yVelocity) > 0.01f) {
+        //    yVelocity += (accelerationY * timeStep);
+        //}
+
+        //if (std::abs(xPosition) > 0.001f || std::abs(xVelocity) > 0.01f) {
+        //    xVelocity += (accelerationX * timeStep);
+        //}
 
     }
 
@@ -113,80 +117,98 @@ public:
         // Check for Floor Collision (0.0)
         if (yPosition <= 0.0f)
         {
-            yPosition = 0.0f;           // Snap to floor
-            yVelocity *= -(1.0f - lossY); // Flip velocity and apply loss
-            xVelocity *= (1.0f - lossX); // Apply loss
+            if (std::abs(yVelocity) >= 0.001f)
+            {
+                yPosition = 0.0f;           // Snap to floor
+                yVelocity *= -(1.0f - lossY); // Flip velocity and apply loss
+                xVelocity *= (1.0f - frictionX); // Apply loss
 
-            // Optional: Stop the ball if it's just vibrating microscopically
-            if (std::abs(yVelocity) < 0.01f)
+                triggerY = true;
+            }
+            else
             {
                 yVelocity = 0.0f;
-            }
-
-            triggerY = true;
+            }            
         }
-        // Check for Ceiling Collision (1.0)
-        else if (yPosition >= 1.0f)
-        {
-            yPosition = 1.0f;           // Snap to ceiling
-            yVelocity *= -(1.0f - lossY); // Flip velocity and apply loss
-            xVelocity *= (1.0f - lossX); // Apply loss
 
+        // Check for Ceiling Collision (1.0)
+        if (yPosition >= 1.0f)
+        {
             // Optional: Stop the ball if it's just vibrating microscopically
-            if (std::abs(yVelocity) < 0.01f)
+            if (std::abs(yVelocity) >= 0.001f)
             {
+                yPosition = 1.0f;           // Snap to ceiling
+                yVelocity *= -(1.0f - lossY); // Flip velocity and apply loss
+                xVelocity *= (1.0f - frictionX); // Apply loss
+
+                triggerY = true;
+            }
+            else {
                 yVelocity = 0.0f;
             }
+            
 
-            triggerY = true;
         }
 
 
         // Check for Left Collision (0.0)
         if (xPosition <= 0.0f)
         {
-            xPosition = 0.0f;           // Snap to floor
-            xVelocity *= -(1.0f - lossX); // Flip velocity and apply loss
-            yVelocity *= (1.0f - lossY); // Flip velocity and apply loss
 
             // Optional: Stop the ball if it's just vibrating microscopically
-            if (std::abs(xVelocity) < 0.01f)
+            if (std::abs(xVelocity) >= 0.001f)
             {
-                xVelocity = 0.0f;
+                xPosition = 0.0f;           // Snap to floor
+                xVelocity *= -(1.0f - lossX); // Flip velocity and apply loss
+                yVelocity *= (1.0f - frictionY); // Flip velocity and apply loss
+
+                triggerX = true;
             }
 
-            triggerX = true;
+            else {
+                xVelocity = 0.0f;
+            }
+            
+
         }
         // Check for Right Collision (1.0)
-        else if (xPosition >= 1.0f)
+        if (xPosition >= 1.0f)
         {
-            xPosition = 1.0f;           // Snap to ceiling
-            xVelocity *= -(1.0f - lossX); // Flip velocity and apply loss
-            yVelocity *= (1.0f - lossY); // Apply loss
-
-            // Optional: Stop the ball if it's just vibrating microscopically
-            if (std::abs(xVelocity) < 0.01f)
+            if (std::abs(xVelocity) >= 0.001f)
             {
-                xVelocity = 0.0f;
+                xPosition = 1.0f;           // Snap to ceiling
+                xVelocity *= -(1.0f - lossX); // Flip velocity and apply loss
+                yVelocity *= (1.0f - frictionY); // Apply loss
+
+                triggerX = true;
             }
 
-            triggerX = true;
+            else {
+                xVelocity = 0.0f;
+            }
+            
         }
 
         return { xPosition, xVelocity , yPosition, yVelocity, maxVelocityX, maxVelocityY, triggerX, triggerY};
     }
 
+
 private:
 
-    float gravity{ -0.01f }; //We are saying that "up" is the positive direction y-direction
-    float push{ 1.0f }; //Left or right push force to act as acceleration in the x-direction
+    float accelerationX{ 0.01f }; //We are saying that "up" is the positive direction y-direction
+    float accelerationY{ -9.81 }; //Left or right accelerationX force to act as acceleration in the x-direction
 
     float lossX{ 0.01f };
     float lossY{ 0.01f };
+
     float xPosition{ 1.0f };
     float yPosition{ 0.0f };
-    float xVelocity{ -1.0f };
-    float yVelocity{ 1.0f };
+
+    float xVelocity{ 1.0f};
+    float yVelocity{ -1.0f };
+
+    float frictionY{ 0.001f };
+    float frictionX{ 0.001f };
 
     float maxVelocityX{ 0.0f };
     float maxVelocityY{ 0.0f };
@@ -199,5 +221,6 @@ private:
 
     bool triggerY{ false };
     bool triggerX{ false };
+
 
 };

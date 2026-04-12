@@ -11,9 +11,11 @@
 #include <JuceHeader.h>
 #include <fstream>
 #include <random>
+#include <vector>
 
 #include "Ball.h"
 #include "FileLoader.h"
+#include "Grain.h"
 //#include "BallSample.h"
 
 
@@ -70,33 +72,32 @@ private:
     Ball testBall2;
     Ball testBall3;
 
+
+    std::vector<Grain> grains;
+    std::vector<Grain> grains1;
+    std::vector<Grain> grains2;
+
+
     // Initlialise file loader
     FileLoader fileLoader;
 
     // Create an audio buffer
     juce::AudioBuffer<float> sampleBuffer{};
 
-
-    int initialSampleLength{ 0 };
-
-    // For changing speed
-    float speed = 1.0f;
-
-    Ball::BallState state{ 1.0f, 0.0f };
-    Ball::BallState state1{ 1.0f, 0.0f };
-    Ball::BallState state2{ 1.0f, 0.0f };
-    Ball::BallState state3{ 1.0f, 0.0f };
+    std::vector<bool> isBallPlaying;
 
     int grainStartSample{ 0 };
     int grainEndSample{ 1 };
     int grainLength{ 0 };
-
     int grainReadPos{ 0 };
 
     float maxGrainLength{ 0.3 };
     int maxGrainSamples{ 0 };
 
     bool isGrainPlaying{ false };
+
+    juce::Reverb reverb;
+    juce::Reverb::Parameters reverbParams;
 
 
     // Taken from https://stackoverflow.com/questions/1125666/how-do-you-do-bicubic-or-other-non-linear-interpolation-of-re-sampled-audio-da
