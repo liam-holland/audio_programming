@@ -14,7 +14,8 @@
 //==============================================================================
 /**
 */
-class Assignment_3AudioProcessorEditor  : public juce::AudioProcessorEditor
+class Assignment_3AudioProcessorEditor  : public juce::AudioProcessorEditor,
+                                          public juce::Timer 
 {
 public:
     Assignment_3AudioProcessorEditor (Assignment_3AudioProcessor&);
@@ -22,6 +23,7 @@ public:
 
     //==============================================================================
     void paint (juce::Graphics&) override;
+    void timerCallback() override; 
     void resized() override;
 
 private:

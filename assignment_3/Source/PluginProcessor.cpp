@@ -21,15 +21,21 @@ Assignment_3AudioProcessor::Assignment_3AudioProcessor()
                       #endif
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                      #endif
-                       )
+                       ),
 #endif
+    parameters(*this, nullptr,"ParamTreeIdentifier",
+        {
+            std::make_unique <juce::AudioParameterFloat> (juce::ParameterID("param_1",1),"one", 0.0f, 0.9f, 0.5f)
+        })
 {
 
     //std::random_device rd;
     //gen = std::mt19937(rd());
 
     // Load the binary of a file into the sampleBuffer
-    fileLoader.loadIntoAudioBuffer( BinaryData::Cath_short_clip_wav, BinaryData::Cath_short_clip_wavSize, sampleBuffer);
+    fileLoader.loadIntoAudioBuffer( BinaryData::A440Hz_wav, BinaryData::A440Hz_wavSize, sampleBuffer);
+
+    yourParameter1 = parameters.getRawParameterValue("param_1");
 
 }
 
@@ -52,12 +58,11 @@ void Assignment_3AudioProcessor::prepareToPlay(double sampleRate, int samplesPer
     testBall2.prepare(sampleRate);
     testBall3.prepare(sampleRate);
 
-
     // Ball 0
-    testBall.setAcceleration( 0.001f , -5.0f);
+    testBall.setAcceleration( 0.001f , -20.0f);
     testBall.setLoss( 0.01f ,0.01f );
     testBall.setStartPosition( 0.01f , 1.0f);
-    testBall.setStartVelocity( 1.0f , -4.0f);
+    testBall.setStartVelocity( 1.0f , -20.0f);
     testBall.solveMaxVelocity();
 
     // Ball 1
@@ -85,7 +90,7 @@ void Assignment_3AudioProcessor::prepareToPlay(double sampleRate, int samplesPer
     for ( auto & g: grains)
     {
         g.setSampleRate(sampleRate);
-        g.setMinandMax(0.1f, 1.0f, 0.3f);
+        g.setMinandMax(0.1f, 0.8f, 0.5f);
     }
 
     for (auto& g : grains1)
@@ -100,21 +105,12 @@ void Assignment_3AudioProcessor::prepareToPlay(double sampleRate, int samplesPer
         g.setMinandMax(1.4f, 6.0f, 3.0f);
     }
 
+    
     reverbParams.roomSize = 0.8f;
-    reverbParams.wetLevel = 0.3f;
-    reverbParams.dryLevel = 0.7f;
     reverbParams.width = 1.0f;
 
     reverb.setParameters(reverbParams);
 
-
-    ////Grain 0
-    //grain.setSampleRate(sampleRate);
-    //grain.setMinandMax(0.02f, 0.3f);
-
-    ////Grain 1
-    //grain1.setSampleRate(sampleRate);
-    //grain1.setMinandMax(0.1f, 1.0f);
 
 
 }
@@ -144,105 +140,43 @@ void Assignment_3AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
     for (int i = 0; i < numSamples; i++)
     {
 
-        Ball::BallState state = testBall.processMovement();
-        Ball::BallState state1 = testBall1.processMovement();
-        Ball::BallState state2 = testBall2.processMovement();
+        // Process the movement of the balls
+        state  = testBall.processMovement();
+        state1 = testBall1.processMovement();
+        state2 = testBall2.processMovement();
 
-        // Assign a grain
-        if (state.triggerY)
-        {
-            for (auto& g : grains)
-            {
-                if (!g.getGrainPlayState())
-                {
-                    g.checkForTrigger(state, sampleBufferSamples);
-                    break;
-                }
-            }
-        }
+        // Assign a voice to the grains vector if triggered
+        assignGrain(state, grains, sampleBufferSamples);
+        assignGrain(state1, grains1, sampleBufferSamples);
+        assignGrain(state2, grains2, sampleBufferSamples);
 
-        // Assign a grain
-        if (state1.triggerY)
-        {
-            for (auto& g : grains1)
-            {
-                if (!g.getGrainPlayState())
-                {
-                    g.checkForTrigger(state1, sampleBufferSamples);
-                    break;
-                }
-            }
-        }
+        // Mix the grains
+        StereoSample out = mixGrains(grains, sampleBuffer, sampleBufferSamples);
+        StereoSample out1 = mixGrains(grains1, sampleBuffer, sampleBufferSamples);
+        StereoSample out2 = mixGrains(grains2, sampleBuffer, sampleBufferSamples);
 
+        // Mix the output of the grains
+        //leftChannel[i] += 0.6f * (out.left + out1.left + out2.left);
+        //rightChannel[i] += 0.6f*( out.right + out1.right + out2.right);
 
-        // Assign a grain
-        if (state2.triggerY)
-        {
-            for (auto& g : grains2)
-            {
-                if (!g.getGrainPlayState())
-                {
-                    g.checkForTrigger(state2, sampleBufferSamples);
-                    break;
-                }
-            }
-        }
+        leftChannel[i] += 0.6f * (out.left);
+        rightChannel[i] += 0.6f * (out.right);
 
-        float mixL = 0.0f;
-        float mixR = 0.0f;
-
-        //Mix all of the grains
-        for (auto& g : grains)
-        {
-            auto out = g.grainOutput(sampleBuffer, sampleBufferSamples);
-            mixL += out.left;
-            mixR += out.right;
-        }
-
-        float mixL1 = 0.0f;
-        float mixR1 = 0.0f;
-
-        //Mix all of the grains
-        for (auto& g : grains1)
-        {
-            auto out = g.grainOutput(sampleBuffer, sampleBufferSamples);
-            mixL1 += out.left;
-            mixR1 += out.right;
-        }
-
-        float mixL2 = 0.0f;
-        float mixR2 = 0.0f;
-
-        //Mix all of the grains
-        for (auto& g : grains2)
-        {
-            auto out = g.grainOutput(sampleBuffer, sampleBufferSamples);
-            mixL2 += out.left;
-            mixR2 += out.right;
-        }      
-
-
-        leftChannel[i] += 0.6f*( mixL + mixL1 + mixL2);
-        rightChannel[i] += 0.6f*( mixR + mixR1 + mixL2);
 
 
     }
 
+    float wet = *yourParameter1;
+
+    reverbParams.wetLevel = wet;
+    reverbParams.dryLevel = 1.0f - wet;
+    reverbParams.width = 1.0f;
+
+    reverb.setParameters(reverbParams);
+    
 
     reverb.processStereo(leftChannel, rightChannel, numSamples);
     
-
-        //grain.checkForTrigger( state, sampleBufferSamples );
-        //Grain::grainStruct grainOut = grain.grainOutput( sampleBuffer, sampleBufferSamples);
-
-        //leftChannel[i] += grainOut.left;
-        //rightChannel[i] += grainOut.right;
-
-        //grain1.checkForTrigger(state1, sampleBufferSamples);
-        //Grain::grainStruct grainOut1 = grain1.grainOutput( sampleBuffer, sampleBufferSamples);
-
-        //leftChannel[i] += grainOut1.left;
-        //rightChannel[i] += grainOut1.right;
 
 }
 
@@ -367,7 +301,8 @@ bool Assignment_3AudioProcessor::hasEditor() const
 
 juce::AudioProcessorEditor* Assignment_3AudioProcessor::createEditor()
 {
-    return new Assignment_3AudioProcessorEditor (*this);
+    return new Assignment_3AudioProcessorEditor(*this);
+    //return new juce::GenericAudioProcessorEditor(*this);
 }
 
 //==============================================================================
@@ -376,12 +311,23 @@ void Assignment_3AudioProcessor::getStateInformation (juce::MemoryBlock& destDat
     // You should use this method to store your parameters in the memory block.
     // You could do that either as raw data, or use the XML or ValueTree classes
     // as intermediaries to make it easy to save and load complex data.
+
+    auto state = parameters.copyState();
+    std::unique_ptr < juce::XmlElement > xml(state.createXml());
+    copyXmlToBinary(*xml, destData);
 }
 
 void Assignment_3AudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
     // You should use this method to restore your parameters from this memory block,
     // whose contents will have been created by the getStateInformation() call.
+
+
+    std::unique_ptr < juce::XmlElement > xmlState(getXmlFromBinary(data,
+        sizeInBytes));
+    if (xmlState.get() != nullptr)
+        if (xmlState->hasTagName(parameters.state.getType()))
+            parameters.replaceState(juce::ValueTree::fromXml(*xmlState));
 }
 
 //==============================================================================

@@ -16,7 +16,6 @@
 #include "Ball.h"
 #include "FileLoader.h"
 #include "Grain.h"
-//#include "BallSample.h"
 
 
 //==============================================================================
@@ -62,6 +61,20 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
+    //==============================================================================
+    //Get the ball coordiantes
+
+    // In Processor (Public)
+    float getBallX() 
+    {
+        return state.xPosition;
+    }
+
+    float getBallY() 
+    {
+        return state.yPosition;
+    }
+
 private:
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Assignment_3AudioProcessor)
@@ -72,11 +85,13 @@ private:
     Ball testBall2;
     Ball testBall3;
 
-
     std::vector<Grain> grains;
     std::vector<Grain> grains1;
     std::vector<Grain> grains2;
 
+    Ball::BallState state;
+    Ball::BallState state1;
+    Ball::BallState state2;
 
     // Initlialise file loader
     FileLoader fileLoader;
@@ -98,6 +113,53 @@ private:
 
     juce::Reverb reverb;
     juce::Reverb::Parameters reverbParams;
+
+    // Parameters for the user to change
+
+    juce::AudioProcessorValueTreeState parameters;
+
+    std::atomic<float>* yourParameter1;
+    std::atomic<float>* yourParameter2;
+    std::atomic<float>* yourParameter3;
+    std::atomic<float>* yourParameter4;
+
+    // Assign a grain
+    void assignGrain(Ball::BallState _state, std::vector<Grain>& grains, int _sampleBufferSamples)
+    {
+        if (_state.triggerY)
+        {
+            for (auto& g : grains)
+            {
+                if (!g.getGrainPlayState())
+                {
+                    g.checkForTrigger(_state, _sampleBufferSamples);
+                    break;
+                }
+            }
+        }
+    }
+
+    //Mix the grains
+    struct StereoSample {
+        float left;
+        float right;
+    };
+
+    StereoSample mixGrains(std::vector<Grain>& grains, const juce::AudioBuffer<float>& sampleBuffer, int _sampleBufferSamples)
+    {
+        float mixL = 0.0f;
+        float mixR = 0.0f;
+
+        for (auto& g : grains)
+        {
+            auto out = g.grainOutput(sampleBuffer, _sampleBufferSamples);
+            mixL += out.left;
+            mixR += out.right;
+        }
+
+        return { mixL, mixR };
+    }
+
 
 
     // Taken from https://stackoverflow.com/questions/1125666/how-do-you-do-bicubic-or-other-non-linear-interpolation-of-re-sampled-audio-da
@@ -123,11 +185,5 @@ private:
 
     //// For creating random numbers
     //std::mt19937 gen; 
-
-    //int bufferStartSample = 0;
-
-    //int playForwards{ 1 };
-
-    //int startOrEnd = 0;
 
 };

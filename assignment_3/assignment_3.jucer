@@ -8,6 +8,7 @@
       <FILE id="gpPNLO" name="FileLoader.h" compile="0" resource="0" file="Source/FileLoader.h"/>
       <FILE id="yLPVkb" name="Ball.h" compile="0" resource="0" file="Source/Ball.h"/>
       <GROUP id="{33483112-6404-05AF-1DF3-B0863E32C8D9}" name="audio_files">
+        <FILE id="DiL5EY" name="A440Hz.wav" compile="0" resource="1" file="Source/audio_files/A440Hz.wav"/>
         <FILE id="sHuvT2" name="speechdirectsound_48.wav" compile="0" resource="1"
               file="../../../../OneDrive - University of Edinburgh/Semester 1/MAFTDSP/Phase Vocoder/audio_samples/speechdirectsound_48.wav"/>
         <FILE id="jq5dBn" name="Cath_short_clip.wav" compile="0" resource="1"
