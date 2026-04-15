@@ -67,12 +67,27 @@ public:
     // In Processor (Public)
     float getBallX() 
     {
-        return state.xPosition;
+        return stateDraw.xPosition;
     }
 
     float getBallY() 
     {
-        return state.yPosition;
+        return stateDraw.yPosition;
+    }
+
+    bool getBallExists()
+    {
+        return stateDraw.exists;
+    }
+
+    float getBallX2() 
+    {
+        return stateDraw2.xPosition;
+    }
+
+    float getBallY2() 
+    {
+        return stateDraw2.yPosition;
     }
 
 private:
@@ -80,18 +95,21 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Assignment_3AudioProcessor)
 
     // Balls
-    Ball testBall;
-    Ball testBall1;
-    Ball testBall2;
-    Ball testBall3;
+    //Ball testBall;
+    //Ball testBall1;
+    //Ball testBall2;
+    //Ball testBall3;
+
+    std::vector<Ball> balls;
 
     std::vector<Grain> grains;
-    std::vector<Grain> grains1;
-    std::vector<Grain> grains2;
+    //std::vector<Grain> grains1;
+    //std::vector<Grain> grains2;
 
-    Ball::BallState state;
-    Ball::BallState state1;
-    Ball::BallState state2;
+    Ball::BallState stateDraw;
+    Ball::BallState stateDraw2;
+    //Ball::BallState state1;
+    //Ball::BallState state2;
 
     // Initlialise file loader
     FileLoader fileLoader;

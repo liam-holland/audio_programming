@@ -28,6 +28,23 @@ public:
         float right;
     };
 
+    void setBallType(std::string _ballType)
+    {
+        if (_ballType =="base")
+        {
+            baseBall = true;
+        }
+        else
+        {
+            baseBall = false;
+        }
+    }
+
+    bool getDelBall()
+    {
+        return endBall;
+    }
+
 
     void setSampleRate(int _sampleRate)
     {
@@ -129,6 +146,12 @@ public:
             if (grainReadPos >= grainSampleLength)
             {
                 isPlaying = false;
+
+                if (!baseBall)
+                {
+                    endBall = true;
+                }
+              
             }
                         
         }
@@ -162,6 +185,9 @@ private:
 
     bool forwards{ true };
     float forwardsMultiplier{ 1 };
+
+    bool baseBall{ true };
+    bool endBall{ true };
 
 };
 

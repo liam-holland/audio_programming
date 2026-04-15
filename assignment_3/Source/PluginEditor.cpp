@@ -31,22 +31,34 @@ Assignment_3AudioProcessorEditor::~Assignment_3AudioProcessorEditor()
 //==============================================================================
 void Assignment_3AudioProcessorEditor::paint (juce::Graphics& g)
 {
-    // Fill the background
+    //// Fill the background
     g.fillAll(juce::Colours::black);
 
-    // Set the ball color
-    g.setColour(juce::Colours::cyan);
 
-    // Draw Ball 1
-    // Get the position from the processor and multiply by width/height
+    if (audioProcessor.getBallExists())
+    {
+        g.setColour(juce::Colours::cyan);
+    }
+    else
+    {
+        g.setColour(juce::Colours::red);
+    }
+    //// Set the ball color
+    //g.setColour(juce::Colours::cyan);
+
+    //// Draw Ball 1
+    //// Get the position from the processor and multiply by width/height
     auto x = audioProcessor.getBallX() * getWidth();
     auto y = (1.0f-audioProcessor.getBallY()) * getHeight();
+    auto x2 = audioProcessor.getBallX2() * getWidth();
+    auto y2 = (1.0f-audioProcessor.getBallY2()) * getHeight();
 
-    // Draw a circle (x, y, width, height)
-    // Note: To center the ball, subtract half its size from x and y
+    //// Draw a circle (x, y, width, height)
+    //// Note: To center the ball, subtract half its size from x and y
     g.fillEllipse(x - 10.0f, y - 10.0f, 20.0f, 20.0f);
+    g.fillEllipse(x2 - 10.0f, y2 - 10.0f, 20.0f, 20.0f);
 
-    //// (Our component is opaque, so we must completely fill the background with a solid colour)
+    // (Our component is opaque, so we must completely fill the background with a solid colour)
     //g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
 
     //g.setColour (juce::Colours::white);

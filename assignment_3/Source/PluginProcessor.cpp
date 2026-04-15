@@ -33,7 +33,7 @@ Assignment_3AudioProcessor::Assignment_3AudioProcessor()
     //gen = std::mt19937(rd());
 
     // Load the binary of a file into the sampleBuffer
-    fileLoader.loadIntoAudioBuffer( BinaryData::A440Hz_wav, BinaryData::A440Hz_wavSize, sampleBuffer);
+    fileLoader.loadIntoAudioBuffer( BinaryData::Cath_short_clip_wav, BinaryData::Cath_short_clip_wavSize, sampleBuffer);
 
     yourParameter1 = parameters.getRawParameterValue("param_1");
 
@@ -53,39 +53,64 @@ void Assignment_3AudioProcessor::prepareToPlay(double sampleRate, int samplesPer
     // initialisation that you need..
 
     // Initiliase the balls with the sample rate
-    testBall.prepare(sampleRate);
-    testBall1.prepare(sampleRate);
-    testBall2.prepare(sampleRate);
-    testBall3.prepare(sampleRate);
+    //testBall.prepare(sampleRate);
+    //testBall1.prepare(sampleRate);
+    //testBall2.prepare(sampleRate);
+    //testBall3.prepare(sampleRate);
 
     // Ball 0
-    testBall.setAcceleration( 0.001f , -20.0f);
-    testBall.setLoss( 0.01f ,0.01f );
-    testBall.setStartPosition( 0.01f , 1.0f);
-    testBall.setStartVelocity( 1.0f , -20.0f);
-    testBall.solveMaxVelocity();
+    //testBall.setAcceleration( 0.001f , -20.0f);
+    //testBall.setLoss( 0.01f ,0.01f );
+    //testBall.setStartPosition( 0.01f , 1.0f);
+    //testBall.setStartVelocity( 1.0f , -20.0f);
+    //testBall.solveMaxVelocity();
 
     // Ball 1
-    testBall1.setAcceleration(0.0f, -1.0f);
-    testBall1.setLoss(0.01f, 0.01f);
-    testBall1.setStartPosition(0.02f, 0.99f);
-    testBall1.setStartVelocity(1.0f, -6.0f);
-    testBall1.solveMaxVelocity();
+    //testBall1.setAcceleration(0.0f, -1.0f);
+    //testBall1.setLoss(0.01f, 0.01f);
+    //testBall1.setStartPosition(0.02f, 0.99f);
+    //testBall1.setStartVelocity(1.0f, -6.0f);
+    //testBall1.solveMaxVelocity();
 
     // Ball 1
-    testBall2.setAcceleration(0.0f, -10.0f);
-    testBall2.setLoss(0.01f, 0.03f);
-    testBall2.setStartPosition(0.04f, 0.99f);
-    testBall2.setStartVelocity(0.75f, -10.0f);
-    testBall2.solveMaxVelocity();
+    //testBall2.setAcceleration(0.0f, -10.0f);
+    //testBall2.setLoss(0.01f, 0.03f);
+    //testBall2.setStartPosition(0.04f, 0.99f);
+    //testBall2.setStartVelocity(0.75f, -10.0f);
+    //testBall2.solveMaxVelocity();
 
-    //Grains per ball
-    int grainsPerBall{ 16 };
+
+    //Max number of balls
+    int numberofBalls{ 32 };
+
+    balls.resize(32);
+
+    for (auto& b : balls)
+    {
+        b.prepare(sampleRate);
+        b.setAcceleration(0.001f, -0.50f);
+        b.setLoss(0.10f, 0.10f);
+        b.setStartPosition(0.01f, 1.0f);
+        b.setStartVelocity(1.0f, -1.0f);
+        b.solveMaxVelocity();
+    }
+
+    balls[1].prepare(sampleRate);
+    balls[1].setAcceleration(0.1f, -5.50f);
+    balls[1].setLoss(0.10f, 0.10f);
+    balls[1].setStartPosition(0.01f, 1.0f);
+    balls[1].setStartVelocity(1.0f, -5.0f);
+    balls[1].solveMaxVelocity();
+
+    //Max grains per ball
+
+    //Currently this is working as maxGrains overall
+    int grainsPerBall{ 512 };
 
     //Grains initialisation
     grains.resize(grainsPerBall);
-    grains1.resize(grainsPerBall);
-    grains2.resize(grainsPerBall);
+    //grains1.resize(grainsPerBall);
+    //grains2.resize(grainsPerBall);
 
     for ( auto & g: grains)
     {
@@ -93,17 +118,17 @@ void Assignment_3AudioProcessor::prepareToPlay(double sampleRate, int samplesPer
         g.setMinandMax(0.1f, 0.8f, 0.5f);
     }
 
-    for (auto& g : grains1)
-    {
-        g.setSampleRate(sampleRate);
-        g.setMinandMax(0.3f, 3.0f, 1.0f);
-    }
+    //for (auto& g : grains1)
+    //{
+    //    g.setSampleRate(sampleRate);
+    //    g.setMinandMax(0.3f, 3.0f, 1.0f);
+    //}
 
-    for (auto& g : grains2)
-    {
-        g.setSampleRate(sampleRate);
-        g.setMinandMax(1.4f, 6.0f, 3.0f);
-    }
+    //for (auto& g : grains2)
+    //{
+    //    g.setSampleRate(sampleRate);
+    //    g.setMinandMax(1.4f, 6.0f, 3.0f);
+    //}
 
     
     reverbParams.roomSize = 0.8f;
@@ -137,32 +162,65 @@ void Assignment_3AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
     int numSamples{ buffer.getNumSamples() };
     int sampleBufferSamples{ sampleBuffer.getNumSamples() };
 
+
     for (int i = 0; i < numSamples; i++)
     {
+ 
+        //To test, make ball 1 and 2 exit
+        balls[0].create();
+        balls[1].create();
+
+        float outLeft = 0.0f;
+        float outRight = 0.0f;
+
+
+        // I want to create splash grains!. Little grains that come off the main one, when a 'base' ball hits
+
+        for (auto& b : balls)
+        {
+            if (b.getExists())
+            {
+                Ball::BallState state = b.processMovement();
+                stateDraw = state;
+
+                assignGrain(state, grains, sampleBufferSamples);
+                StereoSample out = mixGrains(grains, sampleBuffer, sampleBufferSamples);
+                
+                outLeft += out.left;
+                outLeft += out.right;
+            }
+        }
+
+        leftChannel[i] += 0.6f * outLeft;
+        rightChannel[i] += 0.6f * outRight;
+     
+        //if ( testBall.getEndBall() == true)
+        //{
+        //    testBall.~Ball();
+        //}
+
 
         // Process the movement of the balls
-        state  = testBall.processMovement();
-        state1 = testBall1.processMovement();
-        state2 = testBall2.processMovement();
+        //state  = testBall.processMovement();
+        //state1 = testBall1.processMovement();
+        //state2 = testBall2.processMovement();
 
         // Assign a voice to the grains vector if triggered
-        assignGrain(state, grains, sampleBufferSamples);
-        assignGrain(state1, grains1, sampleBufferSamples);
-        assignGrain(state2, grains2, sampleBufferSamples);
+        //assignGrain(state, grains, sampleBufferSamples);
+        //assignGrain(state1, grains1, sampleBufferSamples);
+        //assignGrain(state2, grains2, sampleBufferSamples);
 
         // Mix the grains
-        StereoSample out = mixGrains(grains, sampleBuffer, sampleBufferSamples);
-        StereoSample out1 = mixGrains(grains1, sampleBuffer, sampleBufferSamples);
-        StereoSample out2 = mixGrains(grains2, sampleBuffer, sampleBufferSamples);
+        //StereoSample out = mixGrains(grains, sampleBuffer, sampleBufferSamples);
+        //StereoSample out1 = mixGrains(grains1, sampleBuffer, sampleBufferSamples);
+        //StereoSample out2 = mixGrains(grains2, sampleBuffer, sampleBufferSamples);
 
         // Mix the output of the grains
         //leftChannel[i] += 0.6f * (out.left + out1.left + out2.left);
         //rightChannel[i] += 0.6f*( out.right + out1.right + out2.right);
 
-        leftChannel[i] += 0.6f * (out.left);
-        rightChannel[i] += 0.6f * (out.right);
-
-
+        //leftChannel[i] += 0.6f * (out.left);
+        //rightChannel[i] += 0.6f * (out.right);
 
     }
 
@@ -174,7 +232,6 @@ void Assignment_3AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
 
     reverb.setParameters(reverbParams);
     
-
     reverb.processStereo(leftChannel, rightChannel, numSamples);
     
 

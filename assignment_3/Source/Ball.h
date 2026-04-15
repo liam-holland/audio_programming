@@ -28,6 +28,7 @@ public:
         float yMaxVelocity;
         bool triggerX;
         bool triggerY;
+        bool exists;
     };
 
     void setAcceleration(float _accelerationX, float _accelerationY )
@@ -79,6 +80,8 @@ public:
 
     void updateVelocity()
     {
+
+        yVelocityPrev = yVelocity;
 
         yVelocity += accelerationY * timeStep;
         xVelocity += accelerationX * timeStep;
@@ -134,7 +137,7 @@ public:
         // Check for Ceiling Collision (1.0)
         if (yPosition >= 1.0f)
         {
-            // Optional: Stop the ball if it's just vibrating microscopically
+            
             if (std::abs(yVelocity) >= 0.001f)
             {
                 yPosition = 1.0f;           // Snap to ceiling
@@ -189,7 +192,38 @@ public:
             
         }
 
-        return { xPosition, xVelocity , yPosition, yVelocity, maxVelocityX, maxVelocityY, triggerX, triggerY};
+        zeroVelocityAddition();
+
+        return { xPosition, xVelocity , yPosition, yVelocity, maxVelocityX, maxVelocityY, triggerX, triggerY, exists};
+    }
+
+    void zeroVelocityAddition()
+    {
+        if ( std::abs(yVelocity) <= 0.0f && std::abs(yVelocityPrev) <= 0.0f)
+        {
+            zeroVelocityCount++;
+        }
+
+        else
+        {
+            zeroVelocityCount = 0;
+        }
+
+        if (zeroVelocityCount > 5)
+        {
+            exists = false;
+        }
+    }
+
+
+    void create()
+    {
+        exists = true;
+    }
+
+    bool getExists()
+    {
+        return exists;
     }
 
 
@@ -207,6 +241,11 @@ private:
     float xVelocity{ 1.0f};
     float yVelocity{ -1.0f };
 
+    float xVelocityPrev{ 1.0f};
+    float yVelocityPrev{ -1.0f };
+
+    int zeroVelocityCount{ 0 };
+
     float frictionY{ 0.001f };
     float frictionX{ 0.001f };
 
@@ -222,5 +261,5 @@ private:
     bool triggerY{ false };
     bool triggerX{ false };
 
-
+    bool exists{ false };
 };
