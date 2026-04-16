@@ -20,16 +20,37 @@ public:
 
     struct BallState
     {
+        bool baseBall;
+        float mass;
+        float xAcceleration;
+        float yAcceleration;
+
         float xPosition;
         float xVelocity;
+
         float yPosition;
         float yVelocity;
+
         float xMaxVelocity;
         float yMaxVelocity;
+
         bool triggerX;
         bool triggerY;
+
         bool exists;
     };
+
+    void setBallType(std::string _ballType)
+    {
+        if (_ballType == "base")
+        {
+            baseBall = true;
+        }
+        else if (_ballType == "splash")
+        {
+            baseBall = false;
+        }
+    }
 
     void setAcceleration(float _accelerationX, float _accelerationY )
     {
@@ -54,6 +75,16 @@ public:
     {
         lossX = _lossX;
         lossY = _lossY;
+    }
+
+    void setMass(float _mass)
+    {
+        mass = _mass;
+    }
+
+    float getMass()
+    {
+        return mass;
     }
 
     void solveMaxVelocity()
@@ -127,6 +158,7 @@ public:
                 xVelocity *= (1.0f - frictionX); // Apply loss
 
                 triggerY = true;
+                triggerYCount++;
             }
             else
             {
@@ -145,8 +177,10 @@ public:
                 xVelocity *= (1.0f - frictionX); // Apply loss
 
                 triggerY = true;
+                triggerYCount++;
             }
-            else {
+            else 
+            {
                 yVelocity = 0.0f;
             }
             
@@ -192,9 +226,10 @@ public:
             
         }
 
+        killSplash();
         zeroVelocityAddition();
 
-        return { xPosition, xVelocity , yPosition, yVelocity, maxVelocityX, maxVelocityY, triggerX, triggerY, exists};
+        return { baseBall, mass, accelerationX, accelerationY , xPosition, xVelocity , yPosition, yVelocity, maxVelocityX, maxVelocityY, triggerX, triggerY, exists };
     }
 
     void zeroVelocityAddition()
@@ -210,6 +245,14 @@ public:
         }
 
         if (zeroVelocityCount > 5)
+        {
+            exists = false;
+        }
+    }
+
+    void killSplash()
+    {
+        if (triggerYCount > 3 && !baseBall)
         {
             exists = false;
         }
@@ -261,5 +304,11 @@ private:
     bool triggerY{ false };
     bool triggerX{ false };
 
+    int triggerYCount{ 0 };
+
     bool exists{ false };
+
+    bool baseBall{ true };
+
+
 };

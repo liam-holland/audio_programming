@@ -28,23 +28,6 @@ public:
         float right;
     };
 
-    void setBallType(std::string _ballType)
-    {
-        if (_ballType =="base")
-        {
-            baseBall = true;
-        }
-        else
-        {
-            baseBall = false;
-        }
-    }
-
-    bool getDelBall()
-    {
-        return endBall;
-    }
-
 
     void setSampleRate(int _sampleRate)
     {
@@ -72,6 +55,7 @@ public:
 
     void checkForTrigger( Ball::BallState state, int _sampleBufferSamples)
     {
+        ballMass = state.mass;
 
         if (state.xVelocity > 0)
         {
@@ -132,9 +116,9 @@ public:
 
             if (currentGrainIDX >= 0 && currentGrainIDX < _sampleBufferSamples)
             {
-
-                float sampleL = _sampleBuffer.getSample(0, currentGrainIDX) * envValue;
-                float sampleR = _sampleBuffer.getSample( _sampleBuffer.getNumChannels() > 1 ? 1 : 0, currentGrainIDX) * envValue;
+                // Multiply by the envelope and the mass of the ball
+                float sampleL = _sampleBuffer.getSample(0, currentGrainIDX) * envValue * ballMass;
+                float sampleR = _sampleBuffer.getSample( _sampleBuffer.getNumChannels() > 1 ? 1 : 0, currentGrainIDX) * envValue * ballMass;
 
                 grainReadPos++;
 
@@ -146,11 +130,6 @@ public:
             if (grainReadPos >= grainSampleLength)
             {
                 isPlaying = false;
-
-                if (!baseBall)
-                {
-                    endBall = true;
-                }
               
             }
                         
@@ -164,9 +143,9 @@ private:
 
     int sampleRate{ 48000 };
 
+    float ballMass{ 1 };
 
     bool isPlaying{ false };
-
 
     float maxGrainLength{ 0.4f };
     float minGrainLength{ 0.01f };
@@ -186,8 +165,6 @@ private:
     bool forwards{ true };
     float forwardsMultiplier{ 1 };
 
-    bool baseBall{ true };
-    bool endBall{ true };
 
 };
 

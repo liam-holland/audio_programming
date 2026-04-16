@@ -21,7 +21,7 @@
 //==============================================================================
 /**
 */
-class Assignment_3AudioProcessor  : public juce::AudioProcessor
+class Assignment_3AudioProcessor : public juce::AudioProcessor
 {
 public:
     //==============================================================================
@@ -29,14 +29,14 @@ public:
     ~Assignment_3AudioProcessor() override;
 
     //==============================================================================
-    void prepareToPlay (double sampleRate, int samplesPerBlock) override;
+    void prepareToPlay(double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
 
-   #ifndef JucePlugin_PreferredChannelConfigurations
-    bool isBusesLayoutSupported (const BusesLayout& layouts) const override;
-   #endif
+#ifndef JucePlugin_PreferredChannelConfigurations
+    bool isBusesLayoutSupported(const BusesLayout& layouts) const override;
+#endif
 
-    void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
+    void processBlock(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
 
     //==============================================================================
     juce::AudioProcessorEditor* createEditor() override;
@@ -53,46 +53,49 @@ public:
     //==============================================================================
     int getNumPrograms() override;
     int getCurrentProgram() override;
-    void setCurrentProgram (int index) override;
-    const juce::String getProgramName (int index) override;
-    void changeProgramName (int index, const juce::String& newName) override;
+    void setCurrentProgram(int index) override;
+    const juce::String getProgramName(int index) override;
+    void changeProgramName(int index, const juce::String& newName) override;
 
     //==============================================================================
-    void getStateInformation (juce::MemoryBlock& destData) override;
-    void setStateInformation (const void* data, int sizeInBytes) override;
+    void getStateInformation(juce::MemoryBlock& destData) override;
+    void setStateInformation(const void* data, int sizeInBytes) override;
 
     //==============================================================================
     //Get the ball coordiantes
 
-    // In Processor (Public)
-    float getBallX() 
-    {
-        return stateDraw.xPosition;
-    }
+    //// In Processor (Public)
+    //float getBallX()
+    //{
+    //    return stateDraw.xPosition;
+    //}
 
-    float getBallY() 
-    {
-        return stateDraw.yPosition;
-    }
+    //float getBallY()
+    //{
+    //    return stateDraw.yPosition;
+    //}
 
-    bool getBallExists()
-    {
-        return stateDraw.exists;
-    }
+    //bool getBallExists()
+    //{
+    //    return stateDraw.exists;
+    //}
 
-    float getBallX2() 
-    {
-        return stateDraw2.xPosition;
-    }
+    //float getBallX2()
+    //{
+    //    return stateDraw2.xPosition;
+    //}
 
-    float getBallY2() 
-    {
-        return stateDraw2.yPosition;
-    }
+    //float getBallY2()
+    //{
+    //    return stateDraw2.yPosition;
+    //}
 
 private:
     //==============================================================================
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Assignment_3AudioProcessor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Assignment_3AudioProcessor)
+
+        // Random number generator
+        juce::Random random;
 
     // Balls
     //Ball testBall;
@@ -136,8 +139,10 @@ private:
 
     juce::AudioProcessorValueTreeState parameters;
 
-    std::atomic<float>* yourParameter1;
-    std::atomic<float>* yourParameter2;
+    std::atomic<float>* reverbSlider;
+    std::atomic<float>* splashNumber;
+
+
     std::atomic<float>* yourParameter3;
     std::atomic<float>* yourParameter4;
 
@@ -170,38 +175,42 @@ private:
 
         for (auto& g : grains)
         {
-            auto out = g.grainOutput(sampleBuffer, _sampleBufferSamples);
-            mixL += out.left;
-            mixR += out.right;
+            if ( g.getGrainPlayState() )
+            {
+                auto out = g.grainOutput(sampleBuffer, _sampleBufferSamples);
+                mixL += out.left;
+                mixR += out.right;
+
+            }
+
         }
 
         return { mixL, mixR };
     }
 
+    int numberOfSplashBalls{ 3 };
+
+    std::vector< Ball::BallState > splashStates;
 
 
-    // Taken from https://stackoverflow.com/questions/1125666/how-do-you-do-bicubic-or-other-non-linear-interpolation-of-re-sampled-audio-da
-    
-    /**
-    * x0 - first sample before
-    * x1 - first sample after
-    * x2 - 2ns sample after
-    * x3 - 3rd sample after
-    */ 
-    //float InterpolateHermite4pt3oX(float x0, float x1, float x2, float x3, float t)
-    //{
-    //    float c0 = x1; 
-    //    float c1 = 0.5F * (x2 - x0);
-    //    float c2 = x0 - (2.5F * x1) + (2 * x2) - (.5F * x3);
-    //    float c3 = (.5F * (x3 - x0)) + (1.5F * (x1 - x2));
-    //    return (((((c3 * t) + c2) * t) + c1) * t) + c0;
-    //}
 
-    //int grainSize{ 2048 };
+        // Taken from https://stackoverflow.com/questions/1125666/how-do-you-do-bicubic-or-other-non-linear-interpolation-of-re-sampled-audio-da
 
-    //int randomNumber{ 0 };
+        /**
+        * x0 - first sample before
+        * x1 - first sample after
+        * x2 - 2ns sample after
+        * x3 - 3rd sample after
+        */
+        //float InterpolateHermite4pt3oX(float x0, float x1, float x2, float x3, float t)
+        //{
+        //    float c0 = x1; 
+        //    float c1 = 0.5F * (x2 - x0);
+        //    float c2 = x0 - (2.5F * x1) + (2 * x2) - (.5F * x3);
+        //    float c3 = (.5F * (x3 - x0)) + (1.5F * (x1 - x2));
+        //    return (((((c3 * t) + c2) * t) + c1) * t) + c0;
+        //}
 
-    //// For creating random numbers
-    //std::mt19937 gen; 
 
 };
+
