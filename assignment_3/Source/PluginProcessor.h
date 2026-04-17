@@ -90,61 +90,40 @@ public:
     //    return stateDraw2.yPosition;
     //}
 
+    void loadAudioFile(const juce::File& file);
+
+    // Sliders
+    juce::AudioProcessorValueTreeState parameters;
+
 private:
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Assignment_3AudioProcessor)
 
-        // Random number generator
-        juce::Random random;
-
-    // Balls
-    //Ball testBall;
-    //Ball testBall1;
-    //Ball testBall2;
-    //Ball testBall3;
-
-    std::vector<Ball> balls;
-
-    std::vector<Grain> grains;
-    //std::vector<Grain> grains1;
-    //std::vector<Grain> grains2;
-
-    Ball::BallState stateDraw;
-    Ball::BallState stateDraw2;
-    //Ball::BallState state1;
-    //Ball::BallState state2;
+    //Set up for loading in an audio file
+    // Create an audio buffer to fill
+    juce::AudioBuffer<float> sampleBuffer{};
 
     // Initlialise file loader
     FileLoader fileLoader;
 
-    // Create an audio buffer
-    juce::AudioBuffer<float> sampleBuffer{};
 
-    std::vector<bool> isBallPlaying;
+    // Set up for creating balls and grains
+    std::vector<Ball> balls;
+    std::vector<Grain> grains;
 
-    int grainStartSample{ 0 };
-    int grainEndSample{ 1 };
-    int grainLength{ 0 };
-    int grainReadPos{ 0 };
-
-    float maxGrainLength{ 0.3 };
-    int maxGrainSamples{ 0 };
-
-    bool isGrainPlaying{ false };
-
-    juce::Reverb reverb;
-    juce::Reverb::Parameters reverbParams;
-
-    // Parameters for the user to change
-
-    juce::AudioProcessorValueTreeState parameters;
 
     std::atomic<float>* reverbSlider;
     std::atomic<float>* splashNumber;
+    std::atomic<float>* grainBaseDeviation;
+    std::atomic<float>* grainBaseLengthPerc;
+    std::atomic<float>* granulatorMix;
+
+    int filePosition = 0; 
 
 
-    std::atomic<float>* yourParameter3;
-    std::atomic<float>* yourParameter4;
+    //Reverb
+    juce::Reverb reverb;
+    juce::Reverb::Parameters reverbParams;
 
     // Assign a grain
     void assignGrain(Ball::BallState _state, std::vector<Grain>& grains, int _sampleBufferSamples)
@@ -175,7 +154,7 @@ private:
 
         for (auto& g : grains)
         {
-            if ( g.getGrainPlayState() )
+            if (g.getGrainPlayState())
             {
                 auto out = g.grainOutput(sampleBuffer, _sampleBufferSamples);
                 mixL += out.left;
@@ -188,9 +167,13 @@ private:
         return { mixL, mixR };
     }
 
-    int numberOfSplashBalls{ 3 };
 
-    std::vector< Ball::BallState > splashStates;
+    // Random number generator
+    juce::Random random;
+
+    // For drawing the balls
+    Ball::BallState stateDraw;
+    Ball::BallState stateDraw2;
 
 
 

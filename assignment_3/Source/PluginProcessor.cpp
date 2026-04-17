@@ -25,19 +25,30 @@ Assignment_3AudioProcessor::Assignment_3AudioProcessor()
 #endif
     parameters(*this, nullptr,"ParamTreeIdentifier",
         {
-            std::make_unique <juce::AudioParameterFloat> (juce::ParameterID("param_1",1),"reverb_slider", 0.0f, 0.9f, 0.5f)
-           ,std::make_unique <juce::AudioParameterInt> ( juce::ParameterID("param_2",1),"splash_number", 0, 8, 3)
+
+            std::make_unique <juce::AudioParameterFloat> (juce::ParameterID("param_1",1),"Revber Wet/Dry", 0.0f, 0.9f, 0.5f)
+           ,std::make_unique <juce::AudioParameterInt> ( juce::ParameterID("param_2",1),"Number of Splash Paricles", 0, 8, 3)
+           ,std::make_unique <juce::AudioParameterFloat> ( juce::ParameterID("param_3",1),"Grain Size %", 0.001f, 0.90f, 0.01f)
+           ,std::make_unique <juce::AudioParameterFloat> ( juce::ParameterID("param_4",1),"Grain Size Deviation %", 0.00f, 0.50f, 0.1f)
+           ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("param_5", 1), "Granulator Mix", 0.0f, 1.0f, 0.5f)
+
+        // Inside APVTS initializer list
+
+
+
+ 
         }
 
     )
 {
 
-
     // Load the binary of a file into the sampleBuffer
-    fileLoader.loadIntoAudioBuffer( BinaryData::Cath_short_clip_wav, BinaryData::Cath_short_clip_wavSize, sampleBuffer);
-
+    //fileLoader.loadIntoAudioBuffer( BinaryData::Cath_short_clip_wav, BinaryData::Cath_short_clip_wavSize, sampleBuffer);
     reverbSlider = parameters.getRawParameterValue( "param_1" );
     splashNumber = parameters.getRawParameterValue( "param_2" );
+    grainBaseLengthPerc = parameters.getRawParameterValue( "param_3" );
+    grainBaseDeviation = parameters.getRawParameterValue( "param_4" );
+    granulatorMix = parameters.getRawParameterValue("param_5");
 
 }
 
@@ -58,27 +69,23 @@ void Assignment_3AudioProcessor::prepareToPlay(double sampleRate, int samplesPer
     int numberofBalls{ 32 };
     balls.resize(32);
 
+    // Prepare all the balls, but don't create any
     for (auto& b : balls)
     {
         b.prepare(sampleRate);
-        //b.setAcceleration(0.001f, -0.50f);
-        //b.setLoss(0.10f, 0.10f);
-        //b.setStartPosition(0.01f, 1.0f);
-        //b.setStartVelocity(1.0f, -1.0f);
-        //b.solveMaxVelocity();
     }
 
     balls[0].create();
     balls[0].setBallType("base");
-    balls[0].setAcceleration(0.01f, -5.50f);
-    balls[0].setLoss(0.10f, 0.10f);
+    balls[0].setAcceleration(0.001f, -5.50f);
+    balls[0].setLoss(0.010f, 0.010f);
     balls[0].setStartPosition(0.01f, 1.0f);
     balls[0].setStartVelocity(1.0f, -1.0f);
     balls[0].solveMaxVelocity();
 
     balls[1].create();
     balls[1].setBallType("base");
-    balls[1].setAcceleration(0.01f, -3.50f);
+    balls[1].setAcceleration(0.001f, -3.50f);
     balls[1].setLoss(0.01f, 0.01f);
     balls[1].setStartPosition(0.03f, 1.0f);
     balls[1].setStartVelocity(1.0f, -2.5f);
@@ -108,9 +115,17 @@ void Assignment_3AudioProcessor::prepareToPlay(double sampleRate, int samplesPer
     reverbParams.width = 1.0f;
     reverb.setParameters(reverbParams);
 
-    // Reserve the space for splashes
-    splashStates.reserve(32);
+}
 
+void Assignment_3AudioProcessor::loadAudioFile(const juce::File& file)
+{
+    // .getFullPathName() converts the File object to the String the loader expects
+    fileLoader.loadIntoAudioBuffer( file.getFullPathName(), sampleBuffer);
+
+    // Optional: Debug check to see if it worked
+    if (sampleBuffer.getNumSamples() > 0) {
+        juce::Logger::writeToLog("Successfully loaded: " + juce::String(sampleBuffer.getNumSamples()) + " samples.");
+    }
 }
 
 void Assignment_3AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
@@ -135,10 +150,40 @@ void Assignment_3AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
     int numSamples{ buffer.getNumSamples() };
     int sampleBufferSamples{ sampleBuffer.getNumSamples() };
 
+    // Calculate min, max and base seconds
+
+    float currentFileDuration = (float)sampleBufferSamples / getSampleRate();
+
+    float base = currentFileDuration * *grainBaseLengthPerc;
+    float dev = *grainBaseDeviation;
+
+    float min = base * (1.0f - dev);
+    float max = base * (1.0f + dev);
+
+    float minClamped = juce::jlimit(0.001f, base, min);
+    float maxClamped = juce::jlimit (base, 0.90f * currentFileDuration, max);
+
+    for (auto& g : grains)
+    {
+        g.setMinandMax(minClamped, maxClamped, base);
+    }
+
+    // Get parameter values
+    float granMix = *granulatorMix;
+    float dryGain = 1.0f - granMix;
+    float wetGain = granMix;
+
 
     for (int i = 0; i < numSamples; i++)
     {
-        splashStates.clear();
+
+        // Read directly from the original file buffer
+        float dryLeft = sampleBuffer.getSample(0, filePosition);
+        float dryRight = sampleBuffer.getNumChannels() > 1 ? sampleBuffer.getSample(1, filePosition) : dryLeft;
+
+        // Loop the playhead
+        filePosition++;
+        if (filePosition >= sampleBufferSamples) filePosition = 0;
 
         float outLeft = 0.0f;
         float outRight = 0.0f;
@@ -205,13 +250,12 @@ void Assignment_3AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
             }
         }
 
-        StereoSample out = mixGrains(grains, sampleBuffer, sampleBufferSamples);
+        StereoSample wetOut = mixGrains(grains, sampleBuffer, sampleBufferSamples);
 
-        outLeft += out.left;
-        outRight += out.right;
-
-        leftChannel[i] += 0.6f * outLeft;
-        rightChannel[i] += 0.6f * outRight;
+        // --- 3. MIXING ---
+        // Combine dry file and wet grains based on the mix slider
+        leftChannel[i] = (dryLeft * dryGain) + (wetOut.left * wetGain);
+        rightChannel[i] = (dryRight * dryGain) + (wetOut.right * wetGain);
 
     }
 
@@ -350,8 +394,8 @@ bool Assignment_3AudioProcessor::hasEditor() const
 
 juce::AudioProcessorEditor* Assignment_3AudioProcessor::createEditor()
 {
-    //return new Assignment_3AudioProcessorEditor(*this);
-    return new juce::GenericAudioProcessorEditor(*this);
+    return new Assignment_3AudioProcessorEditor(*this);
+    //return new juce::GenericAudioProcessorEditor(*this);
 }
 
 //==============================================================================
