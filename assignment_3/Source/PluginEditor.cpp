@@ -15,9 +15,9 @@ Assignment_3AudioProcessorEditor::Assignment_3AudioProcessorEditor (Assignment_3
     : AudioProcessorEditor (&p), audioProcessor (p)
 {
    
-    // 1. Create the generic UI (this builds all your sliders for you)
+    // Create the generic UI
     genericEditor = std::make_unique<juce::GenericAudioProcessorEditor>(p);
-    addAndMakeVisible(*genericEditor);
+    addAndMakeVisible( *genericEditor );
 
     // Register the basic formats
     formatManager.registerBasicFormats();
@@ -25,9 +25,19 @@ Assignment_3AudioProcessorEditor::Assignment_3AudioProcessorEditor (Assignment_3
     // Set up the button
     loadButton.setButtonText("Load Audio File...");
     addAndMakeVisible(loadButton);
-
     // Define what happens when the button is clicked
     loadButton.onClick = [this] { loadButtonClicked(); };
+
+    // Create attachments to the balls
+    ball1Attachment = std::make_unique< juce::AudioProcessorValueTreeState::ButtonAttachment>(audioProcessor.parameters, "ball_1_toggle", Ball1);
+    ball2Attachment = std::make_unique< juce::AudioProcessorValueTreeState::ButtonAttachment>(audioProcessor.parameters, "ball_2_toggle", Ball2);
+    ball3Attachment = std::make_unique< juce::AudioProcessorValueTreeState::ButtonAttachment>(audioProcessor.parameters, "ball_3_toggle", Ball3);
+    backwardsAttachment = std::make_unique< juce::AudioProcessorValueTreeState::ButtonAttachment>(audioProcessor.parameters, "backwards_toggle", backwardsButton);
+
+    // Choose ball
+    ballMenu.setText("Choose ball", true);
+    addAndMakeVisible(ballMenu);
+    ballMenuAttachment = std::make_unique< juce::AudioProcessorValueTreeState::ComboBoxAttachment>( audioProcessor.parameters, "ball_menu", ballMenu);
 
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
@@ -36,11 +46,13 @@ Assignment_3AudioProcessorEditor::Assignment_3AudioProcessorEditor (Assignment_3
 
 }
 
+
+
 void Assignment_3AudioProcessorEditor::loadButtonClicked()
 {
     // Create the chooser
     fileChooser = std::make_unique<juce::FileChooser>(
-        "Select an audi file to play...",
+        "Select an audio file to play...",
         juce::File::getSpecialLocation(juce::File::userHomeDirectory),
         "*.wav;*.mp3;*.aiff" // Filters
     );
@@ -62,6 +74,7 @@ void Assignment_3AudioProcessorEditor::loadButtonClicked()
     );
 }
 
+
 void Assignment_3AudioProcessorEditor::resized()
 {
     auto area = getLocalBounds();
@@ -70,7 +83,7 @@ void Assignment_3AudioProcessorEditor::resized()
     loadButton.setBounds(area.removeFromTop(60).reduced(10));
 
     // The Generic Editor automatically takes the rest of the space
-    genericEditor->setBounds(area);
+    genericEditor -> setBounds(area);
 }
 
 void Assignment_3AudioProcessorEditor::timerCallback()
@@ -85,43 +98,9 @@ Assignment_3AudioProcessorEditor::~Assignment_3AudioProcessorEditor()
 //==============================================================================
 void Assignment_3AudioProcessorEditor::paint (juce::Graphics& g)
 {
-    //// Fill the background
-    //g.fillAll(juce::Colours::black);
-
-
-    //if (audioProcessor.getBallExists())
-    //{
-    //    g.setColour(juce::Colours::cyan);
-    //}
-    //else
-    //{
-    //    g.setColour(juce::Colours::red);
-    //}
-    //// Set the ball color
-    //g.setColour(juce::Colours::cyan);
-
-    //// Draw Ball 1
-    //// Get the position from the processor and multiply by width/height
-    //auto x = audioProcessor.getBallX() * getWidth();
-    //auto y = (1.0f-audioProcessor.getBallY()) * getHeight();
-    //auto x2 = audioProcessor.getBallX2() * getWidth();
-    //auto y2 = (1.0f-audioProcessor.getBallY2()) * getHeight();
-
-    //// Draw a circle (x, y, width, height)
-    //// Note: To center the ball, subtract half its size from x and y
-    //g.fillEllipse(x - 10.0f, y - 10.0f, 20.0f, 20.0f);
-    //g.fillEllipse(x2 - 10.0f, y2 - 10.0f, 20.0f, 20.0f);
 
     // (Our component is opaque, so we must completely fill the background with a solid colour)
     g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
-
     g.setColour (juce::Colours::white);
     g.setFont (juce::FontOptions (15.0f));
-    //g.drawFittedText ("Hello World!", getLocalBounds(), juce::Justification::centred, 1);
 }
-
-//void Assignment_3AudioProcessorEditor::resized()
-//{
-//    // This is generally where you'll want to lay out the positions of any
-//    // subcomponents in your editor..
-//}

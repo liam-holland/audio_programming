@@ -13,8 +13,6 @@
 #include <JuceHeader.h>
 #include "Ball.h"
 
-
-
 class Grain
 {
 public:
@@ -57,15 +55,23 @@ public:
     {
         ballMass = state.mass;
 
-        if (state.xVelocity > 0)
+        if (allowBackwards)
         {
-            forwards = true;
-            forwardsMultiplier = 1;
+            if (state.xVelocity > 0)
+            {
+                forwards = true;
+                forwardsMultiplier = 1;
+            }
+            else
+            {
+                forwards = false;
+                forwardsMultiplier = -1;
+            }
         }
         else
         {
-            forwards = false;
-            forwardsMultiplier = -1;
+            forwards = true;
+            forwardsMultiplier = 1;
         }
 
         // See if the trigger has been pressed
@@ -138,6 +144,10 @@ public:
         return { 0.0f, 0.0f };
     }
 
+    void setAllowBackwards( bool _setBackwards)
+    {  
+        allowBackwards = _setBackwards;
+    }
 
 private:
 
@@ -164,6 +174,8 @@ private:
 
     bool forwards{ true };
     float forwardsMultiplier{ 1 };
+
+    bool allowBackwards{ false };
 
 
 };

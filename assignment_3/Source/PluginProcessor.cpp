@@ -23,32 +23,29 @@ Assignment_3AudioProcessor::Assignment_3AudioProcessor()
                      #endif
                        ),
 #endif
-    parameters(*this, nullptr,"ParamTreeIdentifier",
-        {
-
-            std::make_unique <juce::AudioParameterFloat> (juce::ParameterID("param_1",1),"Revber Wet/Dry", 0.0f, 0.9f, 0.5f)
-           ,std::make_unique <juce::AudioParameterInt> ( juce::ParameterID("param_2",1),"Number of Splash Paricles", 0, 8, 3)
-           ,std::make_unique <juce::AudioParameterFloat> ( juce::ParameterID("param_3",1),"Grain Size %", 0.001f, 0.90f, 0.01f)
-           ,std::make_unique <juce::AudioParameterFloat> ( juce::ParameterID("param_4",1),"Grain Size Deviation %", 0.00f, 0.50f, 0.1f)
-           ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("param_5", 1), "Granulator Mix", 0.0f, 1.0f, 0.5f)
-
-        // Inside APVTS initializer list
-
-
-
- 
-        }
-
-    )
+    parameters(*this, nullptr, "ParamTreeIdentifier", createParameters())
 {
 
     // Load the binary of a file into the sampleBuffer
-    //fileLoader.loadIntoAudioBuffer( BinaryData::Cath_short_clip_wav, BinaryData::Cath_short_clip_wavSize, sampleBuffer);
-    reverbSlider = parameters.getRawParameterValue( "param_1" );
-    splashNumber = parameters.getRawParameterValue( "param_2" );
-    grainBaseLengthPerc = parameters.getRawParameterValue( "param_3" );
-    grainBaseDeviation = parameters.getRawParameterValue( "param_4" );
-    granulatorMix = parameters.getRawParameterValue("param_5");
+    fileLoader.loadIntoAudioBuffer( BinaryData::Cath_short_clip_wav, BinaryData::Cath_short_clip_wavSize, sampleBuffer);
+    
+    reverbSlider = parameters.getRawParameterValue( "reverb_wet" );
+    splashNumber = parameters.getRawParameterValue( "splash" );
+    grainBaseLengthPerc = parameters.getRawParameterValue( "grain_size_perc" );
+    grainBaseDeviation = parameters.getRawParameterValue( "grain_deviation_perc" );
+    granulatorMix = parameters.getRawParameterValue("gran_mix");
+
+    ballXAcceleration = parameters.getRawParameterValue("x_acceleration");
+    ballYAcceleration = parameters.getRawParameterValue("y_acceleration");
+    ballMass = parameters.getRawParameterValue("ball_mass");
+    ballXLoss = parameters.getRawParameterValue("ball_X_loss");
+    ballYLoss = parameters.getRawParameterValue("ball_Y_loss");
+    ballXStartVelocity = parameters.getRawParameterValue("x_initial_velocity");
+    ballYStartVelocity = parameters.getRawParameterValue("y_initial_velocity");
+    ballXStartPosition = parameters.getRawParameterValue("x_initial_position");
+    ballYStartPosition = parameters.getRawParameterValue("y_initial_position");
+
+    resetParametersToDefault();
 
 }
 
@@ -75,31 +72,6 @@ void Assignment_3AudioProcessor::prepareToPlay(double sampleRate, int samplesPer
         b.prepare(sampleRate);
     }
 
-    balls[0].create();
-    balls[0].setBallType("base");
-    balls[0].setAcceleration(0.001f, -5.50f);
-    balls[0].setLoss(0.010f, 0.010f);
-    balls[0].setStartPosition(0.01f, 1.0f);
-    balls[0].setStartVelocity(1.0f, -1.0f);
-    balls[0].solveMaxVelocity();
-
-    balls[1].create();
-    balls[1].setBallType("base");
-    balls[1].setAcceleration(0.001f, -3.50f);
-    balls[1].setLoss(0.01f, 0.01f);
-    balls[1].setStartPosition(0.03f, 1.0f);
-    balls[1].setStartVelocity(1.0f, -2.5f);
-    balls[1].solveMaxVelocity();
-
-    balls[2].create();
-    balls[2].setBallType("base");
-    balls[2].setAcceleration(0.001f, -1.50f);
-    balls[2].setLoss(0.01f, 0.01f);
-    balls[2].setStartPosition(0.05f, 1.0f);
-    balls[2].setStartVelocity(0.7f, -7.5f);
-    balls[2].solveMaxVelocity();
-
-
     //Currently this is working as maxGrains overall
     int maxGrains{ 512 };
     grains.resize(maxGrains);
@@ -117,14 +89,30 @@ void Assignment_3AudioProcessor::prepareToPlay(double sampleRate, int samplesPer
 
 }
 
+// Create a function that will load the audio files when called
 void Assignment_3AudioProcessor::loadAudioFile(const juce::File& file)
 {
     // .getFullPathName() converts the File object to the String the loader expects
     fileLoader.loadIntoAudioBuffer( file.getFullPathName(), sampleBuffer);
+}
 
-    // Optional: Debug check to see if it worked
-    if (sampleBuffer.getNumSamples() > 0) {
-        juce::Logger::writeToLog("Successfully loaded: " + juce::String(sampleBuffer.getNumSamples()) + " samples.");
+int Assignment_3AudioProcessor::ballMenuSelection()
+{
+    int selectedBallIndex = juce::roundToInt(parameters.getRawParameterValue("ball_menu")->load());
+    return selectedBallIndex;
+}
+
+void Assignment_3AudioProcessor::resetParametersToDefault()
+{
+    // get the parameters directly from the processor
+    auto& params = getParameters();
+
+    for (auto* p : params)
+    {
+        if (auto* rangedParam = dynamic_cast<juce::RangedAudioParameter*>(p))
+        {
+            rangedParam->setValueNotifyingHost(rangedParam->getDefaultValue());
+        }
     }
 }
 
@@ -133,6 +121,45 @@ void Assignment_3AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
     juce::ScopedNoDenormals noDenormals;
     auto totalNumInputChannels = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
+
+    bool isBall1Active = *parameters.getRawParameterValue("ball_1_toggle") > 0.5f;
+    bool isBall2Active = *parameters.getRawParameterValue("ball_2_toggle") > 0.5f;
+    bool isBall3Active = *parameters.getRawParameterValue("ball_3_toggle") > 0.5f;
+    bool backwards = *parameters.getRawParameterValue("backwards_toggle") > 0.5f;
+
+    std::vector<bool> ballActive{ {isBall1Active,isBall2Active, isBall3Active} };
+
+    for (int i = 0; i < 3; i++)
+    {
+        int ballSelected = ballMenuSelection();
+
+        // Create and delete balls
+        if (ballActive[i] && !balls[i].getExists() && ballSelected == i)
+        {
+            balls[i].create();
+            balls[i].setBallType("base");
+            balls[i].setAcceleration(*ballXAcceleration, *ballYAcceleration);
+            balls[i].setLoss(*ballXLoss, *ballYLoss);
+            balls[i].setMass(*ballMass);
+            balls[i].setStartPosition(*ballXStartPosition, *ballYStartPosition);
+            balls[i].setStartVelocity(*ballXStartVelocity,*ballYStartVelocity);
+            balls[i].solveMaxVelocity();
+        }
+        else if (!ballActive[i] && balls[i].getExists())
+        {
+            balls[i].setExisits(false);
+        }
+
+        if (balls[i].getExists())
+        {
+            
+            balls[ballSelected].setAcceleration(*ballXAcceleration, *ballYAcceleration);
+            balls[ballSelected].setLoss(*ballXLoss, *ballYLoss);
+            balls[ballSelected].setMass(*ballMass);
+
+        }
+    }
+
 
     // Clears any output channels that didn't contain input data
     for (auto ch = totalNumInputChannels; ch < totalNumOutputChannels; ++ch)
@@ -146,12 +173,11 @@ void Assignment_3AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
     if (sampleBuffer.getNumSamples() == 0)
         return;
 
-    // Number of samples in buffer
+    // Number of samples in buffer and sample buffer
     int numSamples{ buffer.getNumSamples() };
     int sampleBufferSamples{ sampleBuffer.getNumSamples() };
 
     // Calculate min, max and base seconds
-
     float currentFileDuration = (float)sampleBufferSamples / getSampleRate();
 
     float base = currentFileDuration * *grainBaseLengthPerc;
@@ -166,9 +192,19 @@ void Assignment_3AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
     for (auto& g : grains)
     {
         g.setMinandMax(minClamped, maxClamped, base);
+
+        if (backwards)
+        {
+            g.setAllowBackwards(true);
+        }
+        else
+        {
+            g.setAllowBackwards(false);
+        }
+
     }
 
-    // Get parameter values
+    // Create wet and dry values for the mix
     float granMix = *granulatorMix;
     float dryGain = 1.0f - granMix;
     float wetGain = granMix;
@@ -178,10 +214,10 @@ void Assignment_3AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
     {
 
         // Read directly from the original file buffer
-        float dryLeft = sampleBuffer.getSample(0, filePosition);
+        float dryLeft =  sampleBuffer.getSample(0, filePosition);
         float dryRight = sampleBuffer.getNumChannels() > 1 ? sampleBuffer.getSample(1, filePosition) : dryLeft;
 
-        // Loop the playhead
+        // Loop the player if needed
         filePosition++;
         if (filePosition >= sampleBufferSamples) filePosition = 0;
 
@@ -196,7 +232,6 @@ void Assignment_3AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
             {
                 // If it exists, proccess the movement of that ball
                 Ball::BallState state = b.processMovement();
-                //stateDraw = state;
 
                 // If the ball has hit the floor or ceiling
                 if (state.triggerY)
@@ -204,7 +239,7 @@ void Assignment_3AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
                     // If it has, then assign a grain some information
                     assignGrain(state, grains, sampleBufferSamples);
 
-                    // If it is a "baseBall" and the velocity is above 0.01
+                    // If it is a "baseBall" and the velocity is above 0.05
                     if (state.baseBall && std::abs(state.yVelocity * state.mass) > 0.05f)
                     {
 
@@ -230,23 +265,20 @@ void Assignment_3AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
                                 float vYVar = (random.nextFloat() - 0.5f) * 0.5f;
 
                                 // Set the velocity of the balls
-                                potentialSlot.setStartVelocity(state.xVelocity + vXVar,
-                                    -state.yVelocity * (0.7f + vYVar));
+                                potentialSlot.setStartVelocity( state.xVelocity + vXVar,
+                                    - state.yVelocity * (0.7f + vYVar));
 
                                 potentialSlot.setAcceleration(0.001f, -5.0f);
 
                                 spawnedCount++;
 
-                                // stop searching after I have filled all th slots
+                                // stop searching after all the slots have been filled
                                 if (spawnedCount >= maxToSpawn)
                                     break;
                             }
                         }
-
                     }
                 }
-
-
             }
         }
 
@@ -260,6 +292,7 @@ void Assignment_3AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
     }
 
 
+    // Add reverb
     float wet = *reverbSlider;
 
     reverbParams.wetLevel = wet;
@@ -267,10 +300,8 @@ void Assignment_3AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
     reverbParams.width = 1.0f;
 
     reverb.setParameters(reverbParams);
-    
     reverb.processStereo(leftChannel, rightChannel, numSamples);
     
-
 }
 
 

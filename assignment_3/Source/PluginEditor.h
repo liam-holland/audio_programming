@@ -33,6 +33,7 @@ public:
 private:
 
     void loadButtonClicked();
+    void ballMenuChanged();
 
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.
@@ -41,6 +42,24 @@ private:
     // Create button and file chooser
     juce::TextButton loadButton;
     std::unique_ptr< juce::FileChooser > fileChooser;
+
+    //Create ball buttons attachment, this will link the buttons to the APVTS
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> ball1Attachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> ball2Attachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> ball3Attachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> backwardsAttachment;
+
+    // Create buttons to add balls
+    juce::ToggleButton Ball1;
+    juce::ToggleButton Ball2;
+    juce::ToggleButton Ball3;
+
+    //Play backwards
+    juce::ToggleButton backwardsButton;
+
+    //Choose which ball
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> ballMenuAttachment;
+    juce::ComboBox ballMenu;
 
     // This helper manages audio formats (WAV, AIFF, etc.)
     juce::AudioFormatManager formatManager;

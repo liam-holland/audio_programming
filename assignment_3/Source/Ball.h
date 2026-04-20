@@ -269,6 +269,11 @@ public:
         return exists;
     }
 
+    void setExisits( bool _exists)
+    {
+        exists = _exists;
+    }
+
 
 private:
 
@@ -307,7 +312,6 @@ private:
     int triggerYCount{ 0 };
 
     bool exists{ false };
-
     bool baseBall{ true };
 
 
