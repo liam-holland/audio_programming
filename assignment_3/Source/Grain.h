@@ -13,6 +13,13 @@
 #include <JuceHeader.h>
 #include "Ball.h"
 
+/**
+Creates a grain object.
+
+The grain is something that will play a part of an audio sample
+
+In this project, the properties of the grain are controlled by the ball and the sample chosen
+*/
 class Grain
 {
 public:
@@ -20,13 +27,20 @@ public:
     Grain() = default;
     ~Grain() = default;
 
+    /**
+    * The grain output, once audio has been processed
+    */
     struct grainStruct
     {
         float left;
         float right;
     };
 
-
+    /**
+    * Set the sample rate that the grain is working with. If this is refershed it will also determine the min and max sample lenths
+    * 
+    * @param _sampleRate Sample rate of the project
+    */
     void setSampleRate(int _sampleRate)
     {
         sampleRate = _sampleRate;
@@ -35,6 +49,13 @@ public:
     }
 
 
+    /**
+    Set the min and max grain length of the samples in seconds
+    
+    @param _minGrainLength Minimum grain length in seconds
+    @param _minGrainLength Maximum grain length in seconds
+    @param _minGrainLength The "base" / "average" grain length in seconds
+    */
     void setMinandMax(float _minGrainLength, float _maxGrainLength, float _baseGrainLength)
     {
         minGrainLength = _minGrainLength;
@@ -46,14 +67,28 @@ public:
         baseGrainSampleLength = (int)(baseGrainLength * sampleRate);
     }
 
+    /**
+    Return the playing state of the grain
+    
+    @return isPlaying The playing state of the grain
+    */
     bool getGrainPlayState()
     {
         return isPlaying;
     }
 
+    /**
+    Track a ball and check if that ball has hit the floor or ceiling
+    
+    If the ball has hit a surface, calculate the start of the grain, length of the grain
+    and if the grain is going to be played forwards or backwards
+    */
     void checkForTrigger( Ball::BallState state, int _sampleBufferSamples)
     {
         ballMass = state.mass;
+        ballXVelocityMax = state.xMaxVelocity;
+        ballYVelocityMax = state.yMaxVelocity;
+        ballYVelocity = state.yVelocity;
 
         if (allowBackwards)
         {
@@ -75,29 +110,33 @@ public:
         }
 
         // See if the trigger has been pressed
-
-        //if (state.triggerY && !isPlaying)
         if ( state.triggerY )
         {
             isPlaying = true;
             grainReadPos = 0;
 
-            float velocityPercent = (state.yMaxVelocity > 0.0f)
-                ? std::abs(state.yVelocity) / std::abs(state.yMaxVelocity)
+            // Set the velocity % to be based on the x-direction velocity
+            // The maximum velocity to allow is 10
+            float velocityPercent = std::abs((state.xMaxVelocity > 0.0f))
+                ? std::abs(state.xVelocity) / std::abs(state.xMaxVelocity)
                 : 0.0f;
 
             grainSampleLength = juce::jlimit(minGrainSamples, maxGrainSamples, baseGrainSampleLength); //Choose the length of the grain
             grainSampleLength *= juce::jmap(velocityPercent, 0.75f, 1.25f); // Link the grainLength and velocity, but don't make them tied
+            grainSampleLength = juce::jlimit(minGrainSamples, maxGrainSamples, grainSampleLength);
+
+            float playBackX = juce::jlimit(0.0f, 1.0f, state.xPosition);
                        
             // Add some jitter as to where the grains play
-            // The spread of the jitter is dependennt on the speed the ball is travelling the xDirection
-            float spread = std::abs(state.xVelocity) * 0.2f;
-            float jitter = (juce::Random::getSystemRandom().nextFloat() - 0.5f) * spread;
-            float playBackX = state.xPosition + jitter;
-            playBackX = juce::jlimit(0.0f, 1.0f, playBackX);
+            // The spread of the jitter is dependennt on the accleration the ball is travelling the xDirection
+            //float spread = std::abs(state.xAcceleration) * 0.2f;
+            //float jitter = (juce::Random::getSystemRandom().nextFloat() - 0.5f) * spread;
+            //float playBackX = state.xPosition + jitter;
+            //playBackX = juce::jlimit(0.0f, 1.0f, playBackX);
 
             grainStartSample = (int)floor(playBackX * _sampleBufferSamples);
 
+            // If the ball is going to go backwards, need to ensure that the index read will not be below zero.
             if (!forwards)
             {
                 grainStartSample = juce::jlimit(grainSampleLength, _sampleBufferSamples - 1, grainStartSample);
@@ -108,7 +147,11 @@ public:
 
     }
 
+    /**
+    Return the output of the grain, sample by sample
 
+    @return Left and right channels
+    */
     grainStruct grainOutput(const juce::AudioBuffer<float>& _sampleBuffer , int _sampleBufferSamples )
     {
         // Fill sample if the state is "ON"
@@ -116,27 +159,30 @@ public:
         {
             float phase = (float)grainReadPos / (float)grainSampleLength;
             phase = juce::jlimit(0.0f, 1.0f, phase);
-            float envValue = 0.5f * (1.0f - cos(2.0f * juce::MathConstants<float>::pi * phase));
+            float envValue = 0.5f * (1.0f - cos(2.0f * juce::MathConstants<float>::pi * phase)); // Hann window for playback without clicks
+
+            float velocityYPecent = std::abs(ballYVelocity) / std::abs(ballYVelocityMax);
 
             int currentGrainIDX = grainStartSample + grainReadPos * forwardsMultiplier;
 
             if (currentGrainIDX >= 0 && currentGrainIDX < _sampleBufferSamples)
             {
                 // Multiply by the envelope and the mass of the ball
-                float sampleL = _sampleBuffer.getSample(0, currentGrainIDX) * envValue * ballMass;
-                float sampleR = _sampleBuffer.getSample( _sampleBuffer.getNumChannels() > 1 ? 1 : 0, currentGrainIDX) * envValue * ballMass;
+                float sampleL = _sampleBuffer.getSample(0, currentGrainIDX) * envValue * ballMass * velocityYPecent;
+                float sampleR = _sampleBuffer.getSample( _sampleBuffer.getNumChannels() > 1 ? 1 : 0, currentGrainIDX) * envValue * ballMass * velocityYPecent;
 
                 grainReadPos++;
 
                 return { sampleL, sampleR };
             }
-
+            
+            // Always increase the read position
             grainReadPos++;
 
             if (grainReadPos >= grainSampleLength)
             {
                 isPlaying = false;
-              
+ 
             }
                         
         }
@@ -144,6 +190,9 @@ public:
         return { 0.0f, 0.0f };
     }
 
+    /**
+    Set the grain to be played backwards
+    */
     void setAllowBackwards( bool _setBackwards)
     {  
         allowBackwards = _setBackwards;
@@ -153,7 +202,10 @@ private:
 
     int sampleRate{ 48000 };
 
-    float ballMass{ 1 };
+    float ballMass{ 1.0f };
+    float ballYVelocity{ 1.0f };
+    float ballYVelocityMax{ 10.0f };
+    float ballXVelocityMax{ 10.0f };
 
     bool isPlaying{ false };
 
@@ -170,13 +222,12 @@ private:
     int baseGrainSampleLength{ 0 };
     int grainSampleLength{ 0 };
 
-    float phase{ 0 };
+    float phase{ 0.0f };
 
     bool forwards{ true };
     float forwardsMultiplier{ 1 };
 
     bool allowBackwards{ false };
-
 
 };
 

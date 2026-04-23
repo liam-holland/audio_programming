@@ -21,7 +21,7 @@
 //==============================================================================
 /**
 */
-class Assignment_3AudioProcessor : public juce::AudioProcessor
+class Assignment_3AudioProcessor : public juce::AudioProcessor, public juce::AudioProcessorValueTreeState::Listener
 {
 public:
     //==============================================================================
@@ -65,20 +65,22 @@ public:
 
     void loadAudioFile(const juce::File& file);
 
-    //void ball1Click(bool _ballState);
-    //void ball2Click(bool _ballState);
-    //void ball3Click(bool _ballState);
+    int sampleBufferSamples{ 0 };
 
     int ballMenuSelection();
 
+    int floorOrCeiling();
+
     // My APVTS for all the parameters that the user can choose
     juce::AudioProcessorValueTreeState parameters;
+
+    void parameterChanged(const juce::String& parameterID, float newValue) override;
 
 private:
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Assignment_3AudioProcessor)
 
-
+    int lastSelectedBall = 0;
 
     //Set up for loading in an audio file
     // Create an audio buffer to fill
@@ -87,6 +89,8 @@ private:
     // Initlialise file loader
     FileLoader fileLoader;
 
+    std::atomic<bool> isLoading{ false };
+
     // Set up for creating balls and grains
     std::vector<Ball> balls;
     std::vector<Grain> grains;
@@ -94,38 +98,83 @@ private:
     juce::AudioProcessorValueTreeState::ParameterLayout createParameters()
     {
         return {
-                 std::make_unique <juce::AudioParameterFloat>(juce::ParameterID("reverb_wet",1),"Reverb Wet/Dry", 0.0f, 0.9f, 0.5f)
+                 std::make_unique<juce::AudioParameterChoice>(juce::ParameterID("ball_menu", 1), "Ball Menu", juce::StringArray{"1","2","3"} ,0)
+
+                ,std::make_unique<juce::AudioParameterBool>(juce::ParameterID("mute_balls", 1), "Mute Balls", false)
+                ,std::make_unique<juce::AudioParameterBool>(juce::ParameterID("ball_1_toggle", 1), "Ball 1 State", false)
+                ,std::make_unique<juce::AudioParameterBool>(juce::ParameterID("ball_2_toggle", 1), "Ball 2 State", false)
+                ,std::make_unique<juce::AudioParameterBool>(juce::ParameterID("ball_3_toggle", 1), "Ball 3 State", false)
+
+                ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("x_initial_velocity", 1), "X - Initial Velocity", -10.0f, 10.0f, 1.00f)
+                ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("y_initial_velocity", 1), "Y - Initial Velocity", -10.0f, 10.0f, -1.00f)
+                ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("x_initial_position", 1), "X - Initial Position", 0.001f, 0.999f, 0.001f)
+                ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("y_initial_position", 1), "Y - Initial Position", 0.001f, 0.999f, 0.001f)
+
+                ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("ball_mass", 1), "Mass", 0.05f, 1.0f, 0.50f)
+                ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("centre_of_gravity_x", 1), "Gravity X Centre", 0.00f, 1.0f, 0.50f)
+                ,std::make_unique<juce::AudioParameterChoice>(juce::ParameterID("centre_of_gravity_2", 1), "Gravity Y Centre 2", juce::StringArray{"Floor","Ceiling"} ,1)
+                ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("ball_X_loss", 1), "Ball X Loss", 0.0f, 0.75f, 0.05f)
+                ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("ball_Y_loss", 1), "Ball Y Loss", 0.0f, 0.75f, 0.05f)
+                ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("x_acceleration", 1), "X - Acceleration", 0.0f, 10.0f, 0.00f)
+                ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("y_acceleration", 1), "Y - Acceleration", 0.0f, 10.0f, 0.00f)
+                
+                ,std::make_unique<juce::AudioParameterBool>(juce::ParameterID("backwards_toggle", 1), "Play Backwards", false )
+                ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("lowest_frequency", 1), "Filter Bottom Frequency", 20.0f, 2000.0f, 20.0f)
+                ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("highest_frequency", 1), "Filter Top Frequency", 20.0f, 2000.0f, 20.0f)
+                
+                ,std::make_unique <juce::AudioParameterFloat>(juce::ParameterID("reverb_wet",1),"Reverb Wet/Dry", 0.0f, 0.9f, 0.5f)
                 ,std::make_unique <juce::AudioParameterInt>(juce::ParameterID("splash",1),"Number of Splash Paricles", 0, 8, 3)
                 ,std::make_unique <juce::AudioParameterFloat>(juce::ParameterID("grain_size_perc",1),"Grain Size %", 0.001f, 0.90f, 0.01f)
                 ,std::make_unique <juce::AudioParameterFloat>(juce::ParameterID("grain_deviation_perc",1),"Grain Size Deviation %", 0.00f, 0.50f, 0.1f)
                 ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("gran_mix", 1), "Granulator Mix", 0.0f, 1.0f, 0.5f)
-                ,std::make_unique<juce::AudioParameterBool>(juce::ParameterID("ball_1_toggle", 1), "Ball 1 State", false )
-                ,std::make_unique<juce::AudioParameterBool>(juce::ParameterID("ball_2_toggle", 1), "Ball 2 State", false )
-                ,std::make_unique<juce::AudioParameterBool>(juce::ParameterID("ball_3_toggle", 1), "Ball 3 State", false )
-                ,std::make_unique<juce::AudioParameterBool>(juce::ParameterID("backwards_toggle", 1), "Play Backwards", false )
-                ,std::make_unique<juce::AudioParameterChoice>(juce::ParameterID("ball_menu", 1), "Ball Menu", juce::StringArray{"1","2","3"} ,0)
-                ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("ball_mass", 1), "Mass", 0.05f, 1.0f, 0.50f)
-                ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("ball_X_loss", 1), "Ball X Loss", 0.0f, 0.75f, 0.05f)
-                ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("ball_Y_loss", 1), "Ball Y Loss", 0.0f, 0.75f, 0.05f)
-                ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("x_acceleration", 1), "X - Acceleration", -10.0f, 10.0f, 0.00f)
-                ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("y_acceleration", 1), "Y - Acceleration", -10.0f, 10.0f, 0.00f)
-                ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("x_initial_velocity", 1), "X - Initial Velocity", -10.0f, 10.0f, 1.00f)
-                ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("y_initial_velocity", 1), "Y - Initial Velocity", -10.0f, 0.0f, -1.00f)
-                ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("x_initial_position", 1), "X - Initial Position", 0.001f, 0.999f, 0.001f)
-                ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("y_initial_position", 1), "Y - Initial Position", 0.001f, 0.999f, 0.001f)
+    
         };
     }
 
-    void resetParametersToDefault();
+    struct BallSettings
+    {
+        // Movement and Physics
+        float xInitialVelocity = 1.0f;
+        float yInitialVelocity = -1.0f;
+        float xInitialPosition = 0.001f;
+        float yInitialPosition = 0.001f;
+        float mass = 0.5f;
+        float xLoss = 0.05f;
+        float yLoss = 0.05f;
+        float xAcceleration = 0.0f;
+        float yAcceleration = 0.0f;
 
-    // A list of IDs you want to group together
-    const std::vector<juce::String> ballParamIDs{ "ball_mass", "ball_X_loss", "ball_Y_loss" };
+        // Gravity and State
+        float gravityX = 0.5f;
+        int gravityYChoice = 1; // 0 for Floor, 1 for Ceiling
+        bool isActive = false;
+    };
+
+    // An array to hold the state for our 3 base balls
+    BallSettings savedBallSettings[3];
+
+    // A helper to push the UI values INTO a storage slot
+    void saveCurrentSettingsToSlot(int ballIndex);
+
+    // A helper to pull storage values OUT to the UI
+    void loadSettingsFromSlot(int ballIndex);
+
+    // Flag to prevent the "feedback loop" I mentioned earlier
+    bool isUpdatingFromInternalSource = false;
+
+    void resetParametersToDefault();
 
     std::atomic<float>* reverbSlider;
     std::atomic<float>* splashNumber;
     std::atomic<float>* grainBaseDeviation;
     std::atomic<float>* grainBaseLengthPerc;
     std::atomic<float>* granulatorMix;
+
+    std::atomic<float>* centreOfGravityX;
+    std::atomic<float>* centreOfGravityY;
+
+    std::atomic<float>* lowestFrequency;
+    std::atomic<float>* highestFrequency;
 
     std::atomic<float>* ballMass;
     std::atomic<float>* ballXStartVelocity;
@@ -159,6 +208,9 @@ private:
         }
     }
 
+    // A high pass filter
+    juce::IIRFilter filter;
+
     //Mix the grains
     struct StereoSample {
         float left;
@@ -189,28 +241,7 @@ private:
     // Random number generator
     juce::Random random;
 
-    // For drawing the balls
-    Ball::BallState stateDraw;
-    Ball::BallState stateDraw2;
-
-
-
-        // Taken from https://stackoverflow.com/questions/1125666/how-do-you-do-bicubic-or-other-non-linear-interpolation-of-re-sampled-audio-da
-
-        /**
-        * x0 - first sample before
-        * x1 - first sample after
-        * x2 - 2ns sample after
-        * x3 - 3rd sample after
-        */
-        //float InterpolateHermite4pt3oX(float x0, float x1, float x2, float x3, float t)
-        //{
-        //    float c0 = x1; 
-        //    float c1 = 0.5F * (x2 - x0);
-        //    float c2 = x0 - (2.5F * x1) + (2 * x2) - (.5F * x3);
-        //    float c3 = (.5F * (x3 - x0)) + (1.5F * (x1 - x2));
-        //    return (((((c3 * t) + c2) * t) + c1) * t) + c0;
-        //}
+    juce::SmoothedValue<float> muteSmoother;
 
 
 };

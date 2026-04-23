@@ -14,39 +14,42 @@
 Assignment_3AudioProcessorEditor::Assignment_3AudioProcessorEditor (Assignment_3AudioProcessor& p)
     : AudioProcessorEditor (&p), audioProcessor (p)
 {
-   
-    // Create the generic UI
+  
+    //// Create the generic UI
     genericEditor = std::make_unique<juce::GenericAudioProcessorEditor>(p);
     addAndMakeVisible( *genericEditor );
 
     // Register the basic formats
     formatManager.registerBasicFormats();
 
-    // Set up the button
-    loadButton.setButtonText("Load Audio File...");
-    addAndMakeVisible(loadButton);
-    // Define what happens when the button is clicked
-    loadButton.onClick = [this] { loadButtonClicked(); };
 
     // Create attachments to the balls
     ball1Attachment = std::make_unique< juce::AudioProcessorValueTreeState::ButtonAttachment>(audioProcessor.parameters, "ball_1_toggle", Ball1);
     ball2Attachment = std::make_unique< juce::AudioProcessorValueTreeState::ButtonAttachment>(audioProcessor.parameters, "ball_2_toggle", Ball2);
     ball3Attachment = std::make_unique< juce::AudioProcessorValueTreeState::ButtonAttachment>(audioProcessor.parameters, "ball_3_toggle", Ball3);
     backwardsAttachment = std::make_unique< juce::AudioProcessorValueTreeState::ButtonAttachment>(audioProcessor.parameters, "backwards_toggle", backwardsButton);
+    ballMuteAttachment = std::make_unique< juce::AudioProcessorValueTreeState::ButtonAttachment>(audioProcessor.parameters, "mute_balls", ballMute);
 
     // Choose ball
     ballMenu.setText("Choose ball", true);
     addAndMakeVisible(ballMenu);
     ballMenuAttachment = std::make_unique< juce::AudioProcessorValueTreeState::ComboBoxAttachment>( audioProcessor.parameters, "ball_menu", ballMenu);
 
+    // Set up the button
+    loadButton.setButtonText("Load Audio File...");
+    addAndMakeVisible(loadButton);
+    // Define what happens when the button is clicked
+    loadButton.onClick = [this] 
+    { 
+        DBG("Button was physically clicked!");
+        loadButtonClicked(); 
+    };
+
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
-    setSize (400, 500);
-    startTimerHz(100);
+    setSize (400, 800);
 
 }
-
-
 
 void Assignment_3AudioProcessorEditor::loadButtonClicked()
 {
@@ -57,8 +60,7 @@ void Assignment_3AudioProcessorEditor::loadButtonClicked()
         "*.wav;*.mp3;*.aiff" // Filters
     );
 
-    auto chooserFlags = juce::FileBrowserComponent::openMode
-        | juce::FileBrowserComponent::canSelectFiles;
+    auto chooserFlags = juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles;
 
     // Launch the file chooser
     fileChooser->launchAsync(chooserFlags, [this](const juce::FileChooser& fc)

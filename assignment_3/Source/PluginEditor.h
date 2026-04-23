@@ -48,6 +48,7 @@ private:
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> ball2Attachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> ball3Attachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> backwardsAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> ballMuteAttachment;
 
     // Create buttons to add balls
     juce::ToggleButton Ball1;
@@ -56,6 +57,7 @@ private:
 
     //Play backwards
     juce::ToggleButton backwardsButton;
+    juce::ToggleButton ballMute;
 
     //Choose which ball
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> ballMenuAttachment;
@@ -74,7 +76,7 @@ private:
 
     }
 
-    // This is the auto-generated UI
+    // This is the auto generated UI
     std::unique_ptr<juce::GenericAudioProcessorEditor> genericEditor;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Assignment_3AudioProcessorEditor)
