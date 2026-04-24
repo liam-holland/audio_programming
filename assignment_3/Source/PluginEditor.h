@@ -49,6 +49,10 @@ private:
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> ball3Attachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> backwardsAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> ballMuteAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> lockStateAttachment;
+
+    // Create button the lock the state of the balls
+    juce::ToggleButton lockButton;
 
     // Create buttons to add balls
     juce::ToggleButton Ball1;

@@ -54,9 +54,29 @@ Assignment_3AudioProcessor::Assignment_3AudioProcessor()
 
     // Listen to the parameters
     parameters.addParameterListener( "ball_menu", this );
+    parameters.addParameterListener( "lock_state", this);
+    parameters.addParameterListener("x_initial_velocity", this);
+    parameters.addParameterListener("y_initial_velocity", this);
+    parameters.addParameterListener("x_initial_position", this);
+    parameters.addParameterListener("y_initial_position", this);
+    parameters.addParameterListener("ball_mass", this);
+    parameters.addParameterListener("centre_of_gravity_x", this);
+    parameters.addParameterListener("centre_of_gravity_y", this);
+    parameters.addParameterListener("ball_X_loss", this);
+    parameters.addParameterListener("ball_Y_loss", this);
+    parameters.addParameterListener("x_acceleration", this);
+    parameters.addParameterListener("y_acceleration", this);
+
+
+
+    lockStateBool = false; // Ensure lock is off for init
+    for (int i = 0; i < 3; ++i) {
+        saveCurrentSettingsToSlot(i);
+    }
 
     // Initial load when we start the plugin
     lastSelectedBall = 0;
+
     loadSettingsFromSlot(0);
 
     // Set all the parameters to default
@@ -70,8 +90,8 @@ Assignment_3AudioProcessor::~Assignment_3AudioProcessor()
 
 void Assignment_3AudioProcessor::saveCurrentSettingsToSlot(int ballIndex)
 {
-    // Check that the ball index is within the 1-3 limit
-    if (ballIndex < 0 || ballIndex > 2) return;
+    // Check that the ball index is within the 1-3 limit or the lock state has been set to true
+    if (ballIndex < 0 || ballIndex > 2 || lockState() || isUpdatingFromInternalSource) return;
 
     // Create a reference to the saved ball settings
     auto& s = savedBallSettings[ballIndex];
@@ -83,7 +103,7 @@ void Assignment_3AudioProcessor::saveCurrentSettingsToSlot(int ballIndex)
     s.yInitialPosition = *parameters.getRawParameterValue("y_initial_position");
     s.mass = *parameters.getRawParameterValue("ball_mass");
     s.gravityX = *parameters.getRawParameterValue("centre_of_gravity_x");
-    s.gravityYChoice = (int)*parameters.getRawParameterValue("centre_of_gravity_2");
+    s.gravityYChoice = (int)*parameters.getRawParameterValue("centre_of_gravity_y");
     s.xLoss = *parameters.getRawParameterValue("ball_X_loss");
     s.yLoss = *parameters.getRawParameterValue("ball_Y_loss");
     s.xAcceleration = *parameters.getRawParameterValue("x_acceleration");
@@ -96,8 +116,7 @@ void Assignment_3AudioProcessor::saveCurrentSettingsToSlot(int ballIndex)
 
 void Assignment_3AudioProcessor::loadSettingsFromSlot(int ballIndex)
 {
-    if (ballIndex < 0 || ballIndex > 2) return;
-
+    if (ballIndex < 0 || ballIndex > 2 ) return;
 
     auto& s = savedBallSettings[ballIndex];
     isUpdatingFromInternalSource = true; // Prevent the "save" logic from triggering
@@ -109,31 +128,59 @@ void Assignment_3AudioProcessor::loadSettingsFromSlot(int ballIndex)
     parameters.getParameter("y_initial_position")->setValueNotifyingHost(parameters.getParameterRange("y_initial_position").convertTo0to1(s.yInitialPosition));
     parameters.getParameter("ball_mass")->setValueNotifyingHost(parameters.getParameterRange("ball_mass").convertTo0to1(s.mass));
     parameters.getParameter("centre_of_gravity_x")->setValueNotifyingHost(parameters.getParameterRange("centre_of_gravity_x").convertTo0to1(s.gravityX));
-    parameters.getParameter("centre_of_gravity_2")->setValueNotifyingHost(s.gravityYChoice == 0 ? 0.0f : 1.0f);
-    parameters.getParameter("ball_X_loss")->setValueNotifyingHost(parameters.getParameterRange("ball_X_loss").convertTo0to1(s.xLoss));
-    parameters.getParameter("ball_Y_loss")->setValueNotifyingHost(parameters.getParameterRange("ball_Y_loss").convertTo0to1(s.yLoss));
-    parameters.getParameter("x_acceleration")->setValueNotifyingHost(parameters.getParameterRange("x_acceleration").convertTo0to1(s.xAcceleration));
-    parameters.getParameter("y_acceleration")->setValueNotifyingHost(parameters.getParameterRange("y_acceleration").convertTo0to1(s.yAcceleration));
+    parameters.getParameter("centre_of_gravity_y")->setValueNotifyingHost(s.gravityYChoice == 0 ? 0.0f : 1.0f);
+
+    // Set the loss and acceleration to zero if the lock state button has been pressed
+    if (lockState()) {
+        parameters.getParameter("ball_X_loss")->setValueNotifyingHost(parameters.getParameterRange("ball_X_loss").convertTo0to1(0.0f));
+        parameters.getParameter("ball_Y_loss")->setValueNotifyingHost(parameters.getParameterRange("ball_Y_loss").convertTo0to1(0.0f));
+        parameters.getParameter("x_acceleration")->setValueNotifyingHost(parameters.getParameterRange("x_acceleration").convertTo0to1(0.0f));
+        parameters.getParameter("y_acceleration")->setValueNotifyingHost(parameters.getParameterRange("y_acceleration").convertTo0to1(0.0f));
+    }
+    else if (!lockState())
+    {
+        parameters.getParameter("ball_X_loss")->setValueNotifyingHost(parameters.getParameterRange("ball_X_loss").convertTo0to1(s.xLoss));
+        parameters.getParameter("ball_Y_loss")->setValueNotifyingHost(parameters.getParameterRange("ball_Y_loss").convertTo0to1(s.yLoss));
+        parameters.getParameter("x_acceleration")->setValueNotifyingHost(parameters.getParameterRange("x_acceleration").convertTo0to1(s.xAcceleration));
+        parameters.getParameter("y_acceleration")->setValueNotifyingHost(parameters.getParameterRange("y_acceleration").convertTo0to1(s.yAcceleration));
+    }
+
+   
 
     isUpdatingFromInternalSource = false;
 }
 
 void Assignment_3AudioProcessor::parameterChanged(const juce::String& parameterID, float newValue)
 {
+
+    // If WE are the ones moving the sliders in code, don't trigger the save/load logic!
+    if (isUpdatingFromInternalSource) return;
+
     if (parameterID == "ball_menu")
     {
         int newBallIndex = juce::roundToInt(newValue);
 
-        // Save the current GUI slider positions into the PREVIOUS ball's storage
+        // Save current ball before switching
         saveCurrentSettingsToSlot(lastSelectedBall);
 
-        // Update the index
         lastSelectedBall = newBallIndex;
 
-        // Load the NEW ball's storage into the GUI sliders
+        // To prevent audio glitches I need to use the message manager, it expects a lambda function
+
+        // I need to tell the lambda function that it needs to look within this class and it can use newBallIndex
         juce::MessageManager::callAsync([this, newBallIndex] {
             loadSettingsFromSlot(newBallIndex);
             });
+    }
+    else if (parameterID == "lock_state")
+    {
+        juce::MessageManager::callAsync([this] {
+            loadSettingsFromSlot(lastSelectedBall);
+            });
+    }
+    else
+    {
+        saveCurrentSettingsToSlot(lastSelectedBall);
     }
 }
 
@@ -207,7 +254,7 @@ int Assignment_3AudioProcessor::ballMenuSelection()
 
 int Assignment_3AudioProcessor::floorOrCeiling()
 {
-    int selectedFloorOrCeiling = juce::roundToInt(parameters.getRawParameterValue("centre_of_gravity_2")->load());
+    int selectedFloorOrCeiling = juce::roundToInt(parameters.getRawParameterValue("centre_of_gravity_y")->load());
     return selectedFloorOrCeiling;
 }
 
@@ -226,6 +273,93 @@ void Assignment_3AudioProcessor::resetParametersToDefault()
             rangedParam->setValueNotifyingHost(rangedParam->getDefaultValue());
         }
     }
+}
+
+// Assign a grain
+void Assignment_3AudioProcessor::assignGrain(Ball::BallState _state, std::vector<Grain>& grains, int _sampleBufferSamples)
+{
+    if (_state.triggerY)
+    {
+        for (auto& g : grains)
+        {
+            if (!g.getGrainPlayState())
+            {
+                g.checkForTrigger(_state, _sampleBufferSamples);
+                break;
+            }
+        }
+    }
+}
+
+void Assignment_3AudioProcessor::spawnSplashes(Ball::BallState parentState)
+{
+    int spawnedCount = 0;
+    int maxToSpawn = (int)*splashNumber;
+
+    juce::Random random;
+
+    // Look through the whole pool of balls for empty slots
+    for (auto& potentialSlot : balls)
+    {
+        // If a ball doesn't exist
+        if (!potentialSlot.getExists())
+        {
+
+            // Create splash balls, that come off from the main ball
+            potentialSlot.create();
+            potentialSlot.setBallType("splash");
+            potentialSlot.setStartPosition(parentState.xPosition, parentState.yPosition);
+            potentialSlot.setMass(0.2f);
+            potentialSlot.setLoss(0.1f, 0.1f);
+
+            // Vary the velocity of x and y
+            float vXVar = (random.nextFloat() - 0.5f) * parentState.xAcceleration;
+            float vYVar = (random.nextFloat() - 0.5f) * parentState.yAcceleration;
+
+            // Set the velocity of the balls
+            potentialSlot.setStartVelocity(parentState.xVelocity + vXVar,
+                -parentState.yVelocity + vYVar);
+
+            // Set the acceleration of the spash balls
+            potentialSlot.setAcceleration(parentState.xAcceleration, parentState.yAcceleration);
+
+            spawnedCount++;
+
+            // stop searching after all the slots have been filled
+            if (spawnedCount >= maxToSpawn)
+            {
+                return;
+            }
+
+        }
+    }
+}
+
+
+Assignment_3AudioProcessor::StereoSample Assignment_3AudioProcessor::mixGrains(std::vector<Grain>& grains, const juce::AudioBuffer<float>& sampleBuffer, int _sampleBufferSamples)
+{
+    float mixL = 0.0f;
+    float mixR = 0.0f;
+
+    for (auto& g : grains)
+    {
+        if (g.getGrainPlayState())
+        {
+            auto out = g.grainOutput(sampleBuffer, _sampleBufferSamples);
+            mixL += out.left;
+            mixR += out.right;
+
+        }
+
+    }
+
+    return { mixL, mixR };
+};
+
+bool Assignment_3AudioProcessor::lockState()
+{
+    bool lockState = *parameters.getRawParameterValue("lock_state") > 0.5f;
+    return lockState;
 }
 
 void Assignment_3AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
@@ -269,36 +403,41 @@ void Assignment_3AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
     // Get the current value selected in the ball menu
     int ballSelected = ballMenuSelection();
 
+    // If the ball has been marked as active, but doesn't exist, then we create it using the user defined variables
+    if (!balls[ballSelected].getExists())
+    {
+        balls[ballSelected].create();
+        balls[ballSelected].setBallType("base");
+        balls[ballSelected].setAcceleration(*ballXAcceleration, *ballYAcceleration);
+        balls[ballSelected].setLoss(*ballXLoss, *ballYLoss);
+        balls[ballSelected].setMass(*ballMass);
+        balls[ballSelected].setStartPosition(*ballXStartPosition, *ballYStartPosition);
+        balls[ballSelected].setStartVelocity(*ballXStartVelocity, *ballYStartVelocity);
+    }
+
     // Loop through all the base balls
     for (int i = 0; i < 3; i++)
     {
         // Create and delete 
 
-        // If the ball has been marked as active, but doesn't exist, then we create it using the user defined variables
-        if ( ballActive[i] && !balls[i].getExists() && ballSelected == i)
-        {
-            balls[i].create();
-            balls[i].setBallType("base");
-            balls[i].setAcceleration(*ballXAcceleration, *ballYAcceleration);
-            balls[i].setLoss(*ballXLoss, *ballYLoss);
-            balls[i].setMass(*ballMass);
-            balls[i].setStartPosition(*ballXStartPosition, *ballYStartPosition);
-            balls[i].setStartVelocity(*ballXStartVelocity,*ballYStartVelocity);
-        }
         // If the ball has been marked as in active and exisits, then we set the ball to not exists
-        else if (!ballActive[i] && balls[i].getExists())
+        if (!ballActive[i] && balls[i].getExists())
         {
             balls[i].setExisits(false);
         }
 
         // If the ball exists, then we are able to manipulate the values of the ball at the start of each buffer
-        if (balls[i].getExists())
+        else if (balls[i].getExists())
         {
-            balls[ballSelected].setAcceleration(*ballXAcceleration, *ballYAcceleration);
-            balls[ballSelected].setLoss(*ballXLoss, *ballYLoss);
-            balls[ballSelected].setMass(*ballMass);
-            balls[ballSelected].setCentreOfGravity( *centreOfGravityX, floorOrCeiling());
+            if ( !lockState() )
+            {
+                balls[i].setAcceleration(*ballXAcceleration, *ballYAcceleration);
+                balls[i].setLoss(*ballXLoss, *ballYLoss);
+            }
 
+            // Mass and Gravity should always update from the sliders!
+            balls[i].setMass(*ballMass);
+            balls[i].setCentreOfGravity(*centreOfGravityX, floorOrCeiling());
         }
     }
 
@@ -372,6 +511,45 @@ void Assignment_3AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
         filter.setCoefficients(juce::IIRCoefficients::makeHighPass(getSampleRate(), freq));
     }
 
+    // New LOOP, take outside of inuvidial sample by sample loop
+    // otherwise it will cause audio glitches
+
+    // For each ball,
+    for (auto& b : balls)
+    {
+        // Check if the ball exists
+        if (b.getExists())
+        {
+            
+            if (lockState())
+            {
+                b.setAcceleration(0.0f, 0.0f);
+                b.setLoss(0.0f, 0.0f);
+            }
+
+            // If it exists, proccess the movement of that ball
+            b.processMovement(numSamples);
+
+            // Get the state of that ball
+            Ball::BallState state = b.getState();
+
+            // If the ball has hit the floor or ceiling
+            if (state.triggerY)
+            {
+                // If it has, then assign a grain some information
+                assignGrain(state, grains, sampleBufferSamples);
+
+                // If it is a "baseBall" and the velocity is above 0.05
+                if (state.baseBall && std::abs(state.yVelocity * state.mass) > 0.05f)
+                {
+
+                    spawnSplashes(state);
+
+                }
+            }
+        }
+    }
+
     for (int i = 0; i < numSamples; i++)
     {
 
@@ -382,72 +560,6 @@ void Assignment_3AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
         // Loop the player
         filePosition++;
         if (filePosition >= sampleBufferSamples) filePosition = 0;
-
-        // Initialise variables
-        float outLeft = 0.0f;
-        float outRight = 0.0f;
-        float ballY = 0.0f;
-
-        // THIS IS THE MAIN PROCESSING LOOP//
-        // For each ball,
-        for ( auto& b : balls )
-        {
-            // Check if the ball exists
-            if (b.getExists())
-            {
-                // If it exists, proccess the movement of that ball
-                Ball::BallState state = b.processMovement();
-
-                //ballY = state.yPosition;
-
-                // If the ball has hit the floor or ceiling
-                if (state.triggerY)
-                {
-                    // If it has, then assign a grain some information
-                    assignGrain(state, grains, sampleBufferSamples);
-
-                    // If it is a "baseBall" and the velocity is above 0.05
-                    if (state.baseBall && std::abs(state.yVelocity * state.mass) > 0.05f)
-                    {
-                        int spawnedCount = 0;
-                        int maxToSpawn = (int)*splashNumber;
-
-                        // Look through the whole pool of balls for empty slots
-                        for (auto& potentialSlot : balls)
-                        {
-                            // If a ball doesn't exist
-                            if (!potentialSlot.getExists())
-                            {
-
-                                // Create splash balls, that come off from the main ball
-                                potentialSlot.create();
-                                potentialSlot.setBallType("splash");
-                                potentialSlot.setStartPosition(state.xPosition, state.yPosition);
-                                potentialSlot.setMass(0.2f);
-                                potentialSlot.setLoss(0.1f, 0.1f);
-
-                                // Vary the velocity of x and y
-                                float vXVar = (random.nextFloat() - 0.5f) * state.xAcceleration;
-                                float vYVar = (random.nextFloat() - 0.5f) * state.yAcceleration;
-
-                                // Set the velocity of the balls
-                                potentialSlot.setStartVelocity( state.xVelocity + vXVar,
-                                    - state.yVelocity + vYVar);
-
-                                // Set the acceleration of the spash balls
-                                potentialSlot.setAcceleration(state.xAcceleration, state.yAcceleration);
-
-                                spawnedCount++;
-
-                                // stop searching after all the slots have been filled
-                                if (spawnedCount >= maxToSpawn)
-                                    break;
-                            }
-                        }
-                    }
-                }
-            }
-        }
 
         // Get the output after processing the grains
         StereoSample wetOut = mixGrains(grains, sampleBuffer, sampleBufferSamples);

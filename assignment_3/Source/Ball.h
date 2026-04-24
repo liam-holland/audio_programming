@@ -164,15 +164,14 @@ public:
     void prepare(double newSampleRate)
     {
         sampleRate = static_cast<int>(newSampleRate);
-        updateTimeStep();
     }
 
     /**
     Calculate the time step between samples, in seconds
     */
-    void updateTimeStep()
+    void updateTimeStep(int _numSamples)
     {
-        timeStep = 1.0f / sampleRate;
+        timeStep = (1.0f / sampleRate) * (float)_numSamples;
     }
 
     /**
@@ -196,15 +195,10 @@ public:
     void gravitationalForceX()
     {
         float gravPosition = xPosition - centreOfGravityX;
-
         if (gravPosition > 0)
-        {
-            accelerationX *= -1;
-        }
-        else if (gravPosition <= 0)
-        {
-            accelerationX *= 1;
-        }
+            accelerationX = -std::abs(accelerationX);
+        else
+            accelerationX = std::abs(accelerationX);
     }
 
     /**
@@ -215,15 +209,10 @@ public:
     void gravitationalForceY()
     {
         float gravPosition = yPosition - centreOfGravityY;
-
         if (gravPosition > 0)
-        {
-            accelerationY *= -1;
-        }
-        else if (gravPosition <= 0)
-        {
-            accelerationY *= 1;
-        }
+            accelerationY = -std::abs(accelerationY);
+        else
+            accelerationY = std::abs(accelerationY);
     }
 
     /**
@@ -232,6 +221,7 @@ public:
     void updateVelocity()
     {
         gravitationalForceX();
+        gravitationalForceY();
 
         yVelocityPrev = yVelocity;
 
@@ -257,8 +247,10 @@ public:
     * 
     * @return BallState - will return the current state of all the variables associated with the ball
     */
-    BallState processMovement()
+    BallState processMovement(int _numSamples)
     {
+        updateTimeStep(_numSamples);
+
         // Reset the triggers to false
         triggerY = false;
         triggerX = false;
@@ -272,7 +264,7 @@ public:
         // Check for Floor Collision (0.0)
         if (yPosition <= 0.0f)
         {
-            if (std::abs(yVelocity) >= 0.001f)
+            if (std::abs(yVelocity) >= 0.02f)
             {
                 yPosition = 0.0f;                // Snap to floor
                 yVelocity *= -(1.0f - lossY);    // Flip velocity and apply loss
@@ -285,6 +277,7 @@ public:
             else // If the velocity is too small, then make it zero
             {
                 yVelocity = 0.0f;
+                yPosition = 0.0f;
             }            
         }
 
@@ -292,7 +285,7 @@ public:
         if (yPosition >= 1.0f)
         {
             
-            if (std::abs(yVelocity) >= 0.001f)
+            if (std::abs(yVelocity) >= 0.02f)
             {
                 yPosition = 1.0f;               // Snap to ceiling
                 yVelocity *= -(1.0f - lossY);   // Flip velocity and apply loss
@@ -304,6 +297,7 @@ public:
             else 
             {
                 yVelocity = 0.0f;
+                yPosition = 1.0f;
             }
             
 
@@ -367,7 +361,9 @@ public:
     */
     void zeroVelocityAddition()
     {
-        if ( std::abs(yVelocity) <= 0.0f && std::abs(yVelocityPrev) <= 0.0f)
+        float threshold = 0.001f;
+
+        if ( std::abs(yVelocity) <= threshold && std::abs(yVelocityPrev) <= threshold)
         {
             zeroVelocityCount++;
         }
@@ -380,6 +376,7 @@ public:
         if (zeroVelocityCount > 5)
         {
             exists = false;
+            zeroVelocityCount = 0;
         }
     }
 
