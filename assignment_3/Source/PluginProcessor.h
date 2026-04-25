@@ -100,7 +100,8 @@ private:
     std::atomic<bool> isLoading{ false };
 
     // Set up for creating balls and grains
-    std::vector<Ball> balls;
+    std::vector<Ball> baseBalls;
+    std::vector<Ball> splashBalls;
     std::vector<Grain> grains;
 
     juce::AudioProcessorValueTreeState::ParameterLayout createParameters()
@@ -115,10 +116,10 @@ private:
 
                 ,std::make_unique<juce::AudioParameterFloat>("divider1", "=== INITIAL BALL SETUP ===", 0.0f, 100.0f, 0.0f)
 
-                ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("x_initial_velocity", 1), "X - Initial Velocity", -10.0f, 10.0f, 1.00f)
-                ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("y_initial_velocity", 1), "Y - Initial Velocity", -10.0f, 10.0f, -1.00f)
-                ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("x_initial_position", 1), "X - Initial Position", 0.001f, 0.999f, 0.001f)
-                ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("y_initial_position", 1), "Y - Initial Position", 0.001f, 0.999f, 0.001f)
+                ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("x_initial_velocity", 1), "X - Initial Velocity", -10.0f, 10.0f, 0.00f)
+                ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("y_initial_velocity", 1), "Y - Initial Velocity", -10.0f, 10.0f, -0.00f)
+                ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("x_initial_position", 1), "X - Initial Position", 0.001f, 0.999f, 0.5f)
+                //,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("y_initial_position", 1), "Y - Initial Position", 0.001f, 0.999f, 0.001f)
 
                 ,std::make_unique<juce::AudioParameterFloat>("divider2", "=== BALL PARAMETERS ===", 0.0f, 100.0f, 0.0f)
 
@@ -126,22 +127,23 @@ private:
 
                 ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("ball_mass", 1), "Mass", 0.05f, 1.0f, 0.50f)
                 ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("centre_of_gravity_x", 1), "Gravity X Centre", 0.00f, 1.0f, 0.50f)
-                ,std::make_unique<juce::AudioParameterChoice>(juce::ParameterID("centre_of_gravity_y", 1), "Gravity Y Centre 2", juce::StringArray{"Floor","Ceiling"} ,1)
+                ,std::make_unique<juce::AudioParameterChoice>(juce::ParameterID("centre_of_gravity_y", 1), "Gravity Y Centre", juce::StringArray{"Floor","Ceiling"} ,1)
                 ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("ball_X_loss", 1), "Ball X Loss", 0.0f, 0.75f, 0.05f)
                 ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("ball_Y_loss", 1), "Ball Y Loss", 0.0f, 0.75f, 0.05f)
                 ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("x_acceleration", 1), "X - Acceleration", 0.0f, 10.0f, 0.00f)
                 ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("y_acceleration", 1), "Y - Acceleration", 0.0f, 10.0f, 0.00f)
 
                 ,std::make_unique<juce::AudioParameterFloat>("divider3", "=== GRAIN PARAMETERS ===", 0.0f, 100.0f, 0.0f)
-                
+
+                ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("ball_volume", 1), "Ball Grain Volume", 0.0f, 20.0f, 2.0f)
+                ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("gran_mix", 1), "Granulator Mix", 0.0f, 1.0f, 0.5f)
                 ,std::make_unique<juce::AudioParameterBool>(juce::ParameterID("backwards_toggle", 1), "Play Backwards", false )
-                ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("lowest_frequency", 1), "Filter Bottom Frequency", 20.0f, 2000.0f, 20.0f)
-                ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("highest_frequency", 1), "Filter Top Frequency", 20.0f, 2000.0f, 20.0f)
                 ,std::make_unique <juce::AudioParameterFloat>(juce::ParameterID("reverb_wet",1),"Reverb Wet/Dry", 0.0f, 0.9f, 0.5f)
+                ,std::make_unique <juce::AudioParameterFloat>(juce::ParameterID("pan_width",1),"Pan Width", 0.0f, 1.0f, 0.2f)
                 ,std::make_unique <juce::AudioParameterInt>(juce::ParameterID("splash",1),"Number of Splash Paricles", 0, 8, 3)
                 ,std::make_unique <juce::AudioParameterFloat>(juce::ParameterID("grain_size_perc",1),"Grain Size %", 0.001f, 0.90f, 0.01f)
                 ,std::make_unique <juce::AudioParameterFloat>(juce::ParameterID("grain_deviation_perc",1),"Grain Size Deviation %", 0.00f, 0.50f, 0.1f)
-                ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("gran_mix", 1), "Granulator Mix", 0.0f, 1.0f, 0.5f)
+                
     
         };
     }
@@ -150,13 +152,13 @@ private:
     struct BallSettings
     {
         // Movement and Physics
-        float xInitialVelocity = 1.0f;
-        float yInitialVelocity = -1.0f;
-        float xInitialPosition = 0.001f;
-        float yInitialPosition = 0.001f;
+        float xInitialVelocity = 0.0f;
+        float yInitialVelocity = 0.0f;
+        float xInitialPosition = 0.5f;
+        float yInitialPosition = 0.5f;
         float mass = 0.5f;
-        float xLoss = 0.05f;
-        float yLoss = 0.05f;
+        float xLoss = 0.00f;
+        float yLoss = 0.00f;
         float xAcceleration = 0.0f;
         float yAcceleration = 0.0f;
 
@@ -191,18 +193,16 @@ private:
     std::atomic<float>* grainBaseDeviation;
     std::atomic<float>* grainBaseLengthPerc;
     std::atomic<float>* granulatorMix;
+    std::atomic<float>* ballVolume;
+    std::atomic<float>* panWidth;
 
     std::atomic<float>* centreOfGravityX;
     std::atomic<float>* centreOfGravityY;
-
-    std::atomic<float>* lowestFrequency;
-    std::atomic<float>* highestFrequency;
 
     std::atomic<float>* ballMass;
     std::atomic<float>* ballXStartVelocity;
     std::atomic<float>* ballYStartVelocity;
     std::atomic<float>* ballXStartPosition;
-    std::atomic<float>* ballYStartPosition;
     std::atomic<float>* ballXLoss;
     std::atomic<float>* ballYLoss;
     std::atomic<float>* ballXAcceleration;
@@ -217,15 +217,12 @@ private:
     //// Assign a grain
     void assignGrain(Ball::BallState _state, std::vector<Grain>& grains, int _sampleBufferSamples);
     void spawnSplashes(Ball::BallState parentState);
-    StereoSample mixGrains(std::vector<Grain>& grains, const juce::AudioBuffer<float>& sampleBuffer, int _sampleBufferSamples);
-
-    // A high pass filter
-    juce::IIRFilter filter;
 
     // Random number generator
     juce::Random random;
 
     juce::SmoothedValue<float> muteSmoother;
+    juce::SmoothedValue<float> volumeSmoother;
 
 
 };

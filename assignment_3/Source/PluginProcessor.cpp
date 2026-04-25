@@ -35,6 +35,8 @@ Assignment_3AudioProcessor::Assignment_3AudioProcessor()
     grainBaseLengthPerc = parameters.getRawParameterValue( "grain_size_perc" );
     grainBaseDeviation = parameters.getRawParameterValue( "grain_deviation_perc" );
     granulatorMix = parameters.getRawParameterValue("gran_mix");
+    ballVolume = parameters.getRawParameterValue("ball_volume");
+    panWidth = parameters.getRawParameterValue("pan_width");
 
     centreOfGravityX = parameters.getRawParameterValue("centre_of_gravity_x");
     centreOfGravityY = parameters.getRawParameterValue("centre_of_gravity_y");
@@ -47,18 +49,13 @@ Assignment_3AudioProcessor::Assignment_3AudioProcessor()
     ballXStartVelocity = parameters.getRawParameterValue("x_initial_velocity");
     ballYStartVelocity = parameters.getRawParameterValue("y_initial_velocity");
     ballXStartPosition = parameters.getRawParameterValue("x_initial_position");
-    ballYStartPosition = parameters.getRawParameterValue("y_initial_position");
 
-    lowestFrequency = parameters.getRawParameterValue("lowest_frequency");
-    highestFrequency = parameters.getRawParameterValue("highest_frequency");
-
-    // Listen to the parameters
+    // Listen to the parameters of the ball
     parameters.addParameterListener( "ball_menu", this );
     parameters.addParameterListener( "lock_state", this);
     parameters.addParameterListener("x_initial_velocity", this);
     parameters.addParameterListener("y_initial_velocity", this);
     parameters.addParameterListener("x_initial_position", this);
-    parameters.addParameterListener("y_initial_position", this);
     parameters.addParameterListener("ball_mass", this);
     parameters.addParameterListener("centre_of_gravity_x", this);
     parameters.addParameterListener("centre_of_gravity_y", this);
@@ -66,7 +63,6 @@ Assignment_3AudioProcessor::Assignment_3AudioProcessor()
     parameters.addParameterListener("ball_Y_loss", this);
     parameters.addParameterListener("x_acceleration", this);
     parameters.addParameterListener("y_acceleration", this);
-
 
 
     lockStateBool = false; // Ensure lock is off for init
@@ -77,10 +73,10 @@ Assignment_3AudioProcessor::Assignment_3AudioProcessor()
     // Initial load when we start the plugin
     lastSelectedBall = 0;
 
-    loadSettingsFromSlot(0);
-
     // Set all the parameters to default
     resetParametersToDefault();
+
+    loadSettingsFromSlot(0);
 
 }
 
@@ -100,7 +96,6 @@ void Assignment_3AudioProcessor::saveCurrentSettingsToSlot(int ballIndex)
     s.xInitialVelocity = *parameters.getRawParameterValue("x_initial_velocity");
     s.yInitialVelocity = *parameters.getRawParameterValue("y_initial_velocity");
     s.xInitialPosition = *parameters.getRawParameterValue("x_initial_position");
-    s.yInitialPosition = *parameters.getRawParameterValue("y_initial_position");
     s.mass = *parameters.getRawParameterValue("ball_mass");
     s.gravityX = *parameters.getRawParameterValue("centre_of_gravity_x");
     s.gravityYChoice = (int)*parameters.getRawParameterValue("centre_of_gravity_y");
@@ -125,7 +120,6 @@ void Assignment_3AudioProcessor::loadSettingsFromSlot(int ballIndex)
     parameters.getParameter("x_initial_velocity")->setValueNotifyingHost(parameters.getParameterRange("x_initial_velocity").convertTo0to1(s.xInitialVelocity));
     parameters.getParameter("y_initial_velocity")->setValueNotifyingHost(parameters.getParameterRange("y_initial_velocity").convertTo0to1(s.yInitialVelocity));
     parameters.getParameter("x_initial_position")->setValueNotifyingHost(parameters.getParameterRange("x_initial_position").convertTo0to1(s.xInitialPosition));
-    parameters.getParameter("y_initial_position")->setValueNotifyingHost(parameters.getParameterRange("y_initial_position").convertTo0to1(s.yInitialPosition));
     parameters.getParameter("ball_mass")->setValueNotifyingHost(parameters.getParameterRange("ball_mass").convertTo0to1(s.mass));
     parameters.getParameter("centre_of_gravity_x")->setValueNotifyingHost(parameters.getParameterRange("centre_of_gravity_x").convertTo0to1(s.gravityX));
     parameters.getParameter("centre_of_gravity_y")->setValueNotifyingHost(s.gravityYChoice == 0 ? 0.0f : 1.0f);
@@ -148,6 +142,52 @@ void Assignment_3AudioProcessor::loadSettingsFromSlot(int ballIndex)
    
 
     isUpdatingFromInternalSource = false;
+}
+
+void Assignment_3AudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
+{
+
+    // Use this method as the place to do any pre-playback
+    // initialisation that you need..
+
+    //Max number of balls
+    int numberofBalls{ 32 };
+    baseBalls.resize(3);
+    splashBalls.resize(64);
+
+    // Prepare all the balls, but don't set any to exist
+    for (auto& b : baseBalls)
+    {
+        b.prepare(sampleRate);
+    }
+
+    for (auto& b : splashBalls)
+    {
+        b.prepare(sampleRate);
+    }
+
+    //Currently this is working as maxGrains overall
+    int maxGrains{ 512 };
+    grains.resize(maxGrains);
+
+    for (auto& g : grains)
+    {
+        g.setSampleRate(sampleRate);
+        g.setMinandMax(0.1f, 4.0f, 1.5f);
+    }
+
+    // Reverb parameters
+    reverbParams.roomSize = 0.8f;
+    reverbParams.width = 1.0f;
+    reverb.setParameters(reverbParams);
+
+    muteSmoother.reset(sampleRate, 0.01); // 10ms ramp
+    volumeSmoother.reset(sampleRate, 0.01); // 10ms ramp
+
+    // Set initial state immediately to avoid a fade-in on startup
+    float initialMute = (*parameters.getRawParameterValue("mute_balls") > 0.5f) ? 0.0f : 1.0f;
+    muteSmoother.setCurrentAndTargetValue(initialMute);
+
 }
 
 void Assignment_3AudioProcessor::parameterChanged(const juce::String& parameterID, float newValue)
@@ -182,48 +222,6 @@ void Assignment_3AudioProcessor::parameterChanged(const juce::String& parameterI
     {
         saveCurrentSettingsToSlot(lastSelectedBall);
     }
-}
-
-//==============================================================================
-// PREPARE TO PLAY AND PROCESS BLOCK//
-
-void Assignment_3AudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
-{
-    
-    // Use this method as the place to do any pre-playback
-    // initialisation that you need..
-
-    //Max number of balls
-    int numberofBalls{ 32 };
-    balls.resize(32);
-
-    // Prepare all the balls, but don't set any to exist
-    for (auto& b : balls)
-    {
-        b.prepare(sampleRate);
-    }
-
-    //Currently this is working as maxGrains overall
-    int maxGrains{ 512 };
-    grains.resize(maxGrains);
-
-    for ( auto & g: grains)
-    {
-        g.setSampleRate(sampleRate);
-        g.setMinandMax(0.1f, 4.0f, 1.5f);
-    }
-
-    // Reverb parameters
-    reverbParams.roomSize = 0.8f;
-    reverbParams.width = 1.0f;
-    reverb.setParameters(reverbParams);
-
-    muteSmoother.reset(sampleRate, 0.01); // 10ms ramp
-
-    // Set initial state immediately to avoid a fade-in on startup
-    float initialMute = (*parameters.getRawParameterValue("mute_balls") > 0.5f) ? 0.0f : 1.0f;
-    muteSmoother.setCurrentAndTargetValue(initialMute);
-
 }
 
 // Create a function that will load the audio files when called
@@ -285,6 +283,7 @@ void Assignment_3AudioProcessor::assignGrain(Ball::BallState _state, std::vector
             if (!g.getGrainPlayState())
             {
                 g.checkForTrigger(_state, _sampleBufferSamples);
+                g.setPanWidth(*panWidth);
                 break;
             }
         }
@@ -294,34 +293,43 @@ void Assignment_3AudioProcessor::assignGrain(Ball::BallState _state, std::vector
 void Assignment_3AudioProcessor::spawnSplashes(Ball::BallState parentState)
 {
     int spawnedCount = 0;
-    int maxToSpawn = (int)*splashNumber;
+    int maxToSpawn = (int)floor(*splashNumber);
+
+    if (maxToSpawn <= 0)
+        return;
+
+    float splashOrRain = ( (parentState.yPosition < 0.5) ? 0.001f : 0.99f);
+    float directionToLeave = ((parentState.yPosition < 0.5) ? 1.0f : -1.0f);
 
     juce::Random random;
 
     // Look through the whole pool of balls for empty slots
-    for (auto& potentialSlot : balls)
+    for (auto& potentialSlot : splashBalls)
     {
         // If a ball doesn't exist
         if (!potentialSlot.getExists())
         {
+            DBG("Splash Spawned! Parent Y Vel: " + juce::String(parentState.yVelocity));
 
             // Create splash balls, that come off from the main ball
             potentialSlot.create();
             potentialSlot.setBallType("splash");
-            potentialSlot.setStartPosition(parentState.xPosition, parentState.yPosition);
-            potentialSlot.setMass(0.2f);
+            potentialSlot.setStartPosition(parentState.xPosition, splashOrRain);
+            potentialSlot.setMass(0.2f + ((random.nextFloat() - 0.5) / 5.0f) );
             potentialSlot.setLoss(0.1f, 0.1f);
 
+            // Splash grain will always go down to the floor, regardless if they hit the floor or celing
+            potentialSlot.setAcceleration( parentState.xAcceleration, -(std::abs(parentState.yAcceleration)));
+
             // Vary the velocity of x and y
-            float vXVar = (random.nextFloat() - 0.5f) * parentState.xAcceleration;
-            float vYVar = (random.nextFloat() - 0.5f) * parentState.yAcceleration;
+            float vXVar = (random.nextFloat() - 0.5f) * 2.0f;
+            float vYVar = (random.nextFloat()) * std::abs(parentState.yVelocity);
+
+            // Make sure the ball is always moving in the opposite direction to the hit
+            float splashOrRain = ((parentState.yPosition < 0.5) ? 0.001f : 0.99f);
 
             // Set the velocity of the balls
-            potentialSlot.setStartVelocity(parentState.xVelocity + vXVar,
-                -parentState.yVelocity + vYVar);
-
-            // Set the acceleration of the spash balls
-            potentialSlot.setAcceleration(parentState.xAcceleration, parentState.yAcceleration);
+            potentialSlot.setStartVelocity( parentState.xVelocity + vXVar, (std::abs(parentState.yVelocity)*directionToLeave) + vYVar);
 
             spawnedCount++;
 
@@ -333,34 +341,22 @@ void Assignment_3AudioProcessor::spawnSplashes(Ball::BallState parentState)
 
         }
     }
-}
 
-
-Assignment_3AudioProcessor::StereoSample Assignment_3AudioProcessor::mixGrains(std::vector<Grain>& grains, const juce::AudioBuffer<float>& sampleBuffer, int _sampleBufferSamples)
-{
-    float mixL = 0.0f;
-    float mixR = 0.0f;
-
-    for (auto& g : grains)
+    // IF WE GET HERE, it means the loop finished without finding enough slots
+    if (spawnedCount < maxToSpawn)
     {
-        if (g.getGrainPlayState())
-        {
-            auto out = g.grainOutput(sampleBuffer, _sampleBufferSamples);
-            mixL += out.left;
-            mixR += out.right;
-
-        }
-
+        DBG("POOL FULL: Only spawned " + juce::String(spawnedCount) + " out of " + juce::String(maxToSpawn));
     }
-
-    return { mixL, mixR };
-};
+}
 
 bool Assignment_3AudioProcessor::lockState()
 {
     bool lockState = *parameters.getRawParameterValue("lock_state") > 0.5f;
     return lockState;
 }
+
+//==============================================================================
+// PROCESS BLOCK//
 
 void Assignment_3AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
@@ -379,9 +375,18 @@ void Assignment_3AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
     for (auto ch = totalNumInputChannels; ch < totalNumOutputChannels; ++ch)
         buffer.clear(ch, 0, buffer.getNumSamples());
 
-    // Create a stereo output
+    //Create a buffer just for the balls
+    juce::AudioBuffer<float> ballBuffer;
+    ballBuffer.setSize(2, buffer.getNumSamples());
+    ballBuffer.clear();
+
+    // Create a stereo output for dry
     auto* leftChannel = buffer.getWritePointer(0);
     auto* rightChannel = buffer.getWritePointer(1);
+
+    // Create a stereo output for wet
+    auto* leftChannelBalls = ballBuffer.getWritePointer(0);
+    auto* rightChannelBalls = ballBuffer.getWritePointer(1);
 
     // If the buffer is empty, don't process!
     if (sampleBuffer.getNumSamples() == 0)
@@ -404,15 +409,15 @@ void Assignment_3AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
     int ballSelected = ballMenuSelection();
 
     // If the ball has been marked as active, but doesn't exist, then we create it using the user defined variables
-    if (!balls[ballSelected].getExists())
+    if (!baseBalls[ballSelected].getExists())
     {
-        balls[ballSelected].create();
-        balls[ballSelected].setBallType("base");
-        balls[ballSelected].setAcceleration(*ballXAcceleration, *ballYAcceleration);
-        balls[ballSelected].setLoss(*ballXLoss, *ballYLoss);
-        balls[ballSelected].setMass(*ballMass);
-        balls[ballSelected].setStartPosition(*ballXStartPosition, *ballYStartPosition);
-        balls[ballSelected].setStartVelocity(*ballXStartVelocity, *ballYStartVelocity);
+        baseBalls[ballSelected].create();
+        baseBalls[ballSelected].setBallType("base");
+        baseBalls[ballSelected].setAcceleration(*ballXAcceleration, *ballYAcceleration);
+        baseBalls[ballSelected].setLoss(*ballXLoss, *ballYLoss);
+        baseBalls[ballSelected].setMass(*ballMass);
+        baseBalls[ballSelected].setStartPosition(*ballXStartPosition, 0.5f);
+        baseBalls[ballSelected].setStartVelocity(*ballXStartVelocity, *ballYStartVelocity);
     }
 
     // Loop through all the base balls
@@ -421,23 +426,23 @@ void Assignment_3AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
         // Create and delete 
 
         // If the ball has been marked as in active and exisits, then we set the ball to not exists
-        if (!ballActive[i] && balls[i].getExists())
+        if (!ballActive[i] && baseBalls[i].getExists())
         {
-            balls[i].setExisits(false);
+            baseBalls[i].setExisits(false);
         }
 
         // If the ball exists, then we are able to manipulate the values of the ball at the start of each buffer
-        else if (balls[i].getExists())
+        else if (baseBalls[i].getExists())
         {
             if ( !lockState() )
             {
-                balls[i].setAcceleration(*ballXAcceleration, *ballYAcceleration);
-                balls[i].setLoss(*ballXLoss, *ballYLoss);
+                baseBalls[i].setAcceleration(*ballXAcceleration, *ballYAcceleration);
+                baseBalls[i].setLoss(*ballXLoss, *ballYLoss);
             }
 
             // Mass and Gravity should always update from the sliders!
-            balls[i].setMass(*ballMass);
-            balls[i].setCentreOfGravity(*centreOfGravityX, floorOrCeiling());
+            baseBalls[i].setMass(*ballMass);
+            baseBalls[i].setCentreOfGravity(*centreOfGravityX, floorOrCeiling());
         }
     }
 
@@ -485,37 +490,14 @@ void Assignment_3AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
 
     float muteTarget = (*parameters.getRawParameterValue("mute_balls") > 0.5f) ? 0.0f : 1.0f;
     muteSmoother.setTargetValue(muteTarget);
+    volumeSmoother.setTargetValue(*ballVolume);
 
-
-    // Link the total kinetic energy of the simulation to the filter
-    float totalEnergy = 0.0f;
-    int activeCount = 0;
-
-    float lowBound = *lowestFrequency;
-    float highBound = *highestFrequency;
-
-    float sensitivityScale = 0.5;
-
-    for (auto& b : balls) {
-        if (b.getExists()) {
-            auto state = b.getState(); // Assuming you have a getter for velocity
-            totalEnergy += 0.5f * b.getMass() * (state.xVelocity * state.xVelocity + state.yVelocity * state.yVelocity);
-            activeCount++;
-        }
-    }
-
-    // Map and update the filter once per block
-    if (activeCount > 0) {
-        float normEnergy = juce::jlimit(0.0f, 1.0f, totalEnergy * sensitivityScale);
-        float freq = juce::jmap(normEnergy, 0.0f, 1.0f, lowBound, highBound);
-        filter.setCoefficients(juce::IIRCoefficients::makeHighPass(getSampleRate(), freq));
-    }
 
     // New LOOP, take outside of inuvidial sample by sample loop
     // otherwise it will cause audio glitches
 
-    // For each ball,
-    for (auto& b : balls)
+    // For each baseBall,
+    for (auto& b : baseBalls)
     {
         // Check if the ball exists
         if (b.getExists())
@@ -528,7 +510,7 @@ void Assignment_3AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
             }
 
             // If it exists, proccess the movement of that ball
-            b.processMovement(numSamples);
+            b.processMovement( numSamples );
 
             // Get the state of that ball
             Ball::BallState state = b.getState();
@@ -536,16 +518,53 @@ void Assignment_3AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
             // If the ball has hit the floor or ceiling
             if (state.triggerY)
             {
+                
                 // If it has, then assign a grain some information
                 assignGrain(state, grains, sampleBufferSamples);
 
-                // If it is a "baseBall" and the velocity is above 0.05
-                if (state.baseBall && std::abs(state.yVelocity * state.mass) > 0.05f)
+                if (*splashNumber >= 1.0f) // Only even think about splashes if the slider is at 1 or more
                 {
-
-                    spawnSplashes(state);
-
+                    // If it is a "baseBall" and the velocity is above 0.05
+                    if (std::abs(state.yVelocity * state.mass) > 0.05f)
+                    {
+                        spawnSplashes(state);
+                    }
                 }
+
+            }
+        }
+    }
+
+    // For each splashBall
+    for (auto& b : splashBalls)
+    {
+        // Check if the ball exists
+        if (b.getExists())
+        {
+
+            if (lockState())
+            {
+                b.setAcceleration(0.0f, 0.0f);
+                b.setLoss(0.0f, 0.0f);
+            }
+
+            // If it exists, proccess the movement of that ball
+            b.processMovement(numSamples);
+
+            // Get the state of that ball
+            Ball::BallState state = b.getState();
+
+            DBG(state.yPosition);
+
+            // If the ball has hit the floor or ceiling
+            if (state.triggerY)
+            {
+                DBG("Splash Ball Hit Floor!");
+                DBG("Trigger from splash ball");
+
+                // If it has, then assign a grain some information
+                assignGrain(state, grains, sampleBufferSamples);
+
             }
         }
     }
@@ -562,17 +581,35 @@ void Assignment_3AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
         if (filePosition >= sampleBufferSamples) filePosition = 0;
 
         // Get the output after processing the grains
-        StereoSample wetOut = mixGrains(grains, sampleBuffer, sampleBufferSamples);
+        //StereoSample wetOut = mixGrains(grains, sampleBuffer, sampleBufferSamples);
 
-        float filteredLeft = filter.processSingleSampleRaw(wetOut.left * wetGain);
-        float filteredRight = filter.processSingleSampleRaw(wetOut.right * wetGain);
+        float mixL = 0.0f;
+        float mixR = 0.0f;
+
+        for (auto& g : grains)
+        {
+            if (g.getGrainPlayState())
+            {
+                auto out = g.grainOutput(sampleBuffer, sampleBufferSamples);
+                mixL += out.left;
+                mixR += out.right;
+            }
+        }
+
 
         float currentMuteGain = muteSmoother.getNextValue();
+        float currentVolume = volumeSmoother.getNextValue();
 
-        // MIXING 
-        // Combine dry file and wet grains based on the mix slider
-        leftChannel[i] = (dryLeft * dryGain) + (filteredLeft * currentMuteGain) ;
-        rightChannel[i] = (dryRight * dryGain) + (filteredRight * currentMuteGain);
+        float ballL = mixL * wetGain * currentMuteGain * currentVolume;
+        float ballR = mixR * wetGain * currentMuteGain * currentVolume;
+
+        // store ball-only signal
+        leftChannelBalls[i] = ballL;
+        rightChannelBalls[i] = ballR;
+
+        // dry stays separate
+        leftChannel[i] = dryLeft * dryGain;
+        rightChannel[i] = dryRight * dryGain;
 
     }
 
@@ -585,7 +622,14 @@ void Assignment_3AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
     reverbParams.width = 1.0f;
 
     reverb.setParameters(reverbParams);
-    reverb.processStereo(leftChannel, rightChannel, numSamples);
+    reverb.processStereo(leftChannelBalls, rightChannelBalls, numSamples);
+
+    // Mix wet and dry together
+    for (int i = 0; i < numSamples; ++i)
+    {
+        leftChannel[i] += leftChannelBalls[i];
+        rightChannel[i] += rightChannelBalls[i];
+    }
     
 }
 

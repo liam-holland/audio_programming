@@ -143,18 +143,6 @@ public:
         return mass;
     }
 
-    /**
-    Solve the maximum max velocity of the ball given the starting conditions
-    */
-    //void solveMaxVelocity()
-    //{
-    //    // The maximum possible distance is 1.0 (from 0.0 to 1.0 or vice versa)
-    //    float maxDist = 1.0f;
-
-    //    // Use absolute values to ensure I never sqrt a negative number
-    //    maxVelocityX = std::sqrt( std::pow(xVelocity, 2) + 2 * std::abs(accelerationX) * maxDist);
-    //    maxVelocityY = std::sqrt (std::pow(yVelocity, 2) + 2 * std::abs(accelerationY) * maxDist);
-    //}
 
     /**
     * Prepare a ball to be initialised with the sample rate
@@ -316,6 +304,7 @@ public:
                 yVelocity *= (1.0f - frictionY); // Flip velocity and apply loss
 
                 triggerX = true;
+                //panTarget = -panWidth;
             }
 
             else {
@@ -334,6 +323,7 @@ public:
                 yVelocity *= (1.0f - frictionY); // Apply loss
 
                 triggerX = true;
+                //panTarget = panWidth;
             }
 
             else {
@@ -397,6 +387,14 @@ public:
     void create()
     {
         exists = true;
+
+        // RESET PERSISTENT COUNTERS
+        triggerYCount = 0;
+        zeroVelocityCount = 0;
+
+        // Optional: Reset triggers to be safe
+        triggerX = false;
+        triggerY = false;
     }
 
     /**
@@ -432,7 +430,7 @@ private:
     float yVelocity{ -1.0f };
 
     float xPosition{ 1.0f };
-    float yPosition{ 0.0f };
+    float yPosition{ 0.5f };
 
     float frictionY{ 0.001f };
     float frictionX{ 0.001f };

@@ -46,6 +46,8 @@ public:
         sampleRate = _sampleRate;
 
         setMinandMax(minGrainLength, maxGrainLength, baseGrainLength);
+
+        panSmoothed.reset(sampleRate, 0.02);
     }
 
 
@@ -77,6 +79,16 @@ public:
         return isPlaying;
     }
 
+    void setPanWidth( float _panWidth)
+    {
+        panWidth = _panWidth;
+    }
+
+    void setPanSmoothed()
+    {
+        panSmoothed.setTargetValue(pan * panWidth);
+    }
+
     /**
     Track a ball and check if that ball has hit the floor or ceiling
     
@@ -89,6 +101,9 @@ public:
         ballXVelocityMax = state.xMaxVelocity;
         ballYVelocityMax = state.yMaxVelocity;
         ballYVelocity = state.yVelocity;
+        pan = juce::jmap(state.xPosition, 0.0f, 1.0f, -1.0f, 1.0f);
+
+        setPanSmoothed();
 
         if (allowBackwards)
         {
@@ -125,15 +140,14 @@ public:
             grainSampleLength *= juce::jmap(velocityPercent, 0.75f, 1.25f); // Link the grainLength and velocity, but don't make them tied
             grainSampleLength = juce::jlimit(minGrainSamples, maxGrainSamples, grainSampleLength);
 
-            float playBackX = juce::jlimit(0.0f, 1.0f, state.xPosition);
-                       
-            // Add some jitter as to where the grains play
-            // The spread of the jitter is dependennt on the accleration the ball is travelling the xDirection
-            //float spread = std::abs(state.xAcceleration) * 0.2f;
-            //float jitter = (juce::Random::getSystemRandom().nextFloat() - 0.5f) * spread;
-            //float playBackX = state.xPosition + jitter;
-            //playBackX = juce::jlimit(0.0f, 1.0f, playBackX);
+            // If it's a splash ball, quarter the playback time
+            if (!state.baseBall)
+            {
+                grainSampleLength = int(grainSampleLength / 4.0f);
+            }
 
+            float playBackX = juce::jlimit(0.0f, 1.0f, state.xPosition);
+                      
             grainStartSample = (int)floor(playBackX * _sampleBufferSamples);
 
             // If the ball is going to go backwards, need to ensure that the index read will not be below zero.
@@ -147,6 +161,8 @@ public:
 
     }
 
+
+
     /**
     Return the output of the grain, sample by sample
 
@@ -154,6 +170,7 @@ public:
     */
     grainStruct grainOutput(const juce::AudioBuffer<float>& _sampleBuffer , int _sampleBufferSamples )
     {
+
         // Fill sample if the state is "ON"
         if (isPlaying)
         {
@@ -165,13 +182,29 @@ public:
 
             int currentGrainIDX = grainStartSample + grainReadPos * forwardsMultiplier;
 
+            float panS = panSmoothed.getNextValue(); // -1 to +1
+
+            // Equal power
+            float leftGain = std::cos(0.25f * juce::MathConstants<float>::pi * (panS + 1.0f));
+            float rightGain = std::sin(0.25f * juce::MathConstants<float>::pi * (panS + 1.0f));
+
             if (currentGrainIDX >= 0 && currentGrainIDX < _sampleBufferSamples)
             {
                 // Multiply by the envelope and the mass of the ball
-                float sampleL = _sampleBuffer.getSample(0, currentGrainIDX) * envValue * ballMass * velocityYPecent;
-                float sampleR = _sampleBuffer.getSample( _sampleBuffer.getNumChannels() > 1 ? 1 : 0, currentGrainIDX) * envValue * ballMass * velocityYPecent;
+                //float sampleL = _sampleBuffer.getSample(0, currentGrainIDX) * envValue * ballMass * velocityYPecent;
+                //float sampleR = _sampleBuffer.getSample( _sampleBuffer.getNumChannels() > 1 ? 1 : 0, currentGrainIDX) * envValue * ballMass * velocityYPecent;
+
+                // Sum to mono
+                float mono = 0.5 * (
+                  _sampleBuffer.getSample(0, currentGrainIDX) * envValue * ballMass * velocityYPecent
+                +_sampleBuffer.getSample(_sampleBuffer.getNumChannels() > 1 ? 1 : 0, currentGrainIDX) * envValue * ballMass * velocityYPecent
+                   );
+
+                float sampleL = leftGain * mono;
+                float sampleR = rightGain * mono;
 
                 grainReadPos++;
+
 
                 return { sampleL, sampleR };
             }
@@ -228,6 +261,11 @@ private:
     float forwardsMultiplier{ 1 };
 
     bool allowBackwards{ false };
+
+    float panWidth{ 0.3f };
+    float pan{ 0.0f };
+
+    juce::SmoothedValue<float> panSmoothed;
 
 };
 
