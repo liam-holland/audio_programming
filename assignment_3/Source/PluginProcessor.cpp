@@ -314,8 +314,8 @@ void Assignment_3AudioProcessor::spawnSplashes(Ball::BallState parentState)
             // Create splash balls, that come off from the main ball
             potentialSlot.create();
             potentialSlot.setBallType("splash");
-            potentialSlot.setStartPosition(parentState.xPosition, splashOrRain);
-            potentialSlot.setMass(0.2f + ((random.nextFloat() - 0.5) / 5.0f) );
+            potentialSlot.setStartPosition( parentState.xPosition, splashOrRain );
+            potentialSlot.setMass(  parentState.mass*0.3f + ((random.nextFloat() - 0.5) / 5.0f) );
             potentialSlot.setLoss(0.1f, 0.1f);
 
             // Splash grain will always go down to the floor, regardless if they hit the floor or celing
@@ -409,7 +409,7 @@ void Assignment_3AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
     int ballSelected = ballMenuSelection();
 
     // If the ball has been marked as active, but doesn't exist, then we create it using the user defined variables
-    if (!baseBalls[ballSelected].getExists())
+    if (!baseBalls[ballSelected].getExists() && !baseBalls[ballSelected].getJustDied())
     {
         baseBalls[ballSelected].create();
         baseBalls[ballSelected].setBallType("base");
@@ -441,7 +441,7 @@ void Assignment_3AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
             }
 
             // Mass and Gravity should always update from the sliders!
-            baseBalls[i].setMass(*ballMass);
+            //baseBalls[i].setMass(*ballMass);
             baseBalls[i].setCentreOfGravity(*centreOfGravityX, floorOrCeiling());
         }
     }
