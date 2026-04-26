@@ -79,11 +79,17 @@ public:
         return isPlaying;
     }
 
+    /**
+    Set the pan width of the grains
+    */
     void setPanWidth( float _panWidth)
     {
         panWidth = _panWidth;
     }
 
+    /**
+    Set the smoothing of the panning
+    */
     void setPanSmoothed()
     {
         panSmoothed.setTargetValue(pan * panWidth);
@@ -97,6 +103,7 @@ public:
     */
     void checkForTrigger( Ball::BallState state, int _sampleBufferSamples)
     {
+        // Set the values to be used in other functions
         ballMass = state.mass;
         ballXVelocityMax = state.xMaxVelocity;
         ballYVelocityMax = state.yMaxVelocity;
@@ -105,6 +112,7 @@ public:
 
         setPanSmoothed();
 
+        // Assess if the sample should be played forwards of backwards
         if (allowBackwards)
         {
             if (state.xVelocity > 0)
@@ -146,9 +154,16 @@ public:
                 grainSampleLength = int(grainSampleLength / 4.0f);
             }
 
+            // Limit the plaback to be between 0 and 1
             float playBackX = juce::jlimit(0.0f, 1.0f, state.xPosition);
                       
             grainStartSample = (int)floor(playBackX * _sampleBufferSamples);
+
+            // If the ball is going to go forwards, need to ensure that the index read will not be above the last sample.
+            if (forwards)
+            {
+                grainStartSample = juce::jlimit( 0, _sampleBufferSamples - grainSampleLength - 1, grainStartSample);
+            }
 
             // If the ball is going to go backwards, need to ensure that the index read will not be below zero.
             if (!forwards)
@@ -182,29 +197,28 @@ public:
 
             int currentGrainIDX = grainStartSample + grainReadPos * forwardsMultiplier;
 
+            // Get a better panning, using contant power
+            // As shown here: https://dsp.stackexchange.com/questions/21691/algorithm-to-pan-audio
             float panS = panSmoothed.getNextValue(); // -1 to +1
+            float theta = panS * (juce::MathConstants<float>::pi / 4.0f);
 
-            // Equal power
-            float leftGain = std::cos(0.25f * juce::MathConstants<float>::pi * (panS + 1.0f));
-            float rightGain = std::sin(0.25f * juce::MathConstants<float>::pi * (panS + 1.0f));
+            float leftGain = (std::cos(theta) + std::sin(theta)) * 0.70710678f;
+            float rightGain = (std::cos(theta) - std::sin(theta)) * 0.70710678f;
 
             if (currentGrainIDX >= 0 && currentGrainIDX < _sampleBufferSamples)
             {
-                // Multiply by the envelope and the mass of the ball
-                //float sampleL = _sampleBuffer.getSample(0, currentGrainIDX) * envValue * ballMass * velocityYPecent;
-                //float sampleR = _sampleBuffer.getSample( _sampleBuffer.getNumChannels() > 1 ? 1 : 0, currentGrainIDX) * envValue * ballMass * velocityYPecent;
-
+       
                 // Sum to mono
                 float mono = 0.5 * (
                   _sampleBuffer.getSample(0, currentGrainIDX) * envValue * ballMass * velocityYPecent
                 +_sampleBuffer.getSample(_sampleBuffer.getNumChannels() > 1 ? 1 : 0, currentGrainIDX) * envValue * ballMass * velocityYPecent
                    );
 
+                // Apply the panning
                 float sampleL = leftGain * mono;
                 float sampleR = rightGain * mono;
 
                 grainReadPos++;
-
 
                 return { sampleL, sampleR };
             }

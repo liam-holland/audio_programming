@@ -89,7 +89,7 @@ public:
     }
 
     /**
-    * Set the loss of the ball when it hits a surface.
+    * Set the velocity loss of the ball when it hits a surface.
     * @param _lossX Loss in x-direction
     * @param _lossY Loss in y-direction
     */
@@ -99,7 +99,16 @@ public:
         lossY = _lossY;
     }
 
+    /**
+    * Set the mass of the ball.
+    * @param _mass
+    */
     void setMass(float _mass) { mass = _mass; }
+
+    /**
+    * Get the mass of the ball.
+    * @return _mass
+    */
     float getMass() { return mass; }
 
     /**
@@ -119,47 +128,76 @@ public:
         timeStep = (1.0f / (float)sampleRate) * (float)_numSamples;
     }
 
+    /**
+    Set the centre of gravity in the X and Y coordinates.
+    Must be between 0 and 1
+    */
     void setCentreOfGravity(float _centreOfGravityX, float _centreOfGravityY)
     {
         centreOfGravityX = _centreOfGravityX;
         centreOfGravityY = _centreOfGravityY;
     }
 
+    /**
+    Calculate the acceleration due to gravity in the x-direction
+    */
     void gravitationalForceX()
     {
         float gravPosition = xPosition - centreOfGravityX;
         accelerationX = (gravPosition > 0) ? -std::abs(accelerationX) : std::abs(accelerationX);
     }
 
+    /**
+    Calculate the acceleration due to gravity in the y-direction
+    */
     void gravitationalForceY()
     {
         float gravPosition = yPosition - centreOfGravityY;
         accelerationY = (gravPosition > 0) ? -std::abs(accelerationY) : std::abs(accelerationY);
     }
 
+    /**
+    Update the velocity of the ball based on the forces applied
+    */
     void updateVelocity()
     {
         gravitationalForceX();
         gravitationalForceY();
-        yVelocityPrev = yVelocity;
+
         yVelocity = juce::jlimit(-maxVelocityY, maxVelocityY, yVelocity + accelerationY * timeStep);
         xVelocity = juce::jlimit(-maxVelocityX, maxVelocityX, xVelocity + accelerationX * timeStep);
     }
 
+    /**
+    Update the position of the ball, based on the velocity
+    */
     void updatePosition()
     {
         xPosition += (xVelocity * timeStep);
         yPosition += (yVelocity * timeStep);
     }
 
+
+    /**
+    Process the movement of the ball. This will also apply triggers if the ball collides
+    with a surface. This also kills the ball if it is lower than the kinetic energy
+    boundary of 0.01
+
+    @param _numSamples Number of samples of the buffer
+    */
     BallState processMovement(int _numSamples)
     {
-        DBG(mass);
+
+        float kineticEnergyY = 0.5f * mass * (std::abs(yVelocity) * std::abs(yVelocity));
         
-        if (mass < massLowerBoundary)
+        if (kineticEnergyY < kineticEnergyBoundary)
         {
+            if (baseBall)
+            {
+                DBG("Ball Killed!");
+            }
+
             exists = false;
-            justDied = true;
             return getState();
         }
 
@@ -243,8 +281,8 @@ public:
         }
 
         killSplash();
-        zeroVelocityAddition();
         return getState();
+
     }
 
     BallState getState()
@@ -252,69 +290,70 @@ public:
         return { baseBall, mass, accelerationX, accelerationY, xPosition, xVelocity, yPosition, yVelocity, maxVelocityX, maxVelocityY, triggerX, triggerY, exists };
     }
 
-    void zeroVelocityAddition()
-    {
-        float threshold = 0.001f;
-        if (std::abs(yVelocity) <= threshold && std::abs(yVelocityPrev) <= threshold)
-            zeroVelocityCount++;
-        else
-            zeroVelocityCount = 0;
-
-        if (zeroVelocityCount > 5)
-        {
-            exists = false;
-            zeroVelocityCount = 0;
-        }
-    }
-
+    /**
+    Kills any splash balls afte they collide three times. This is so that we don't run
+    out of memory 
+    */
     void killSplash()
     {
         if (triggerYCount > 3 && !baseBall)
             exists = false;
     }
 
+    /**
+    Create a ball, and initialse some base variables
+    */
     void create()
     {
         exists = true;
         triggerYCount = 0;
-        zeroVelocityCount = 0;
         triggerX = false;
         triggerY = false;
     }
 
+    /**
+    Set the mass loss of the ball
+    */
+    void setMassLoss( float _massLoss)
+    {
+        massLoss = _massLoss;
+    }
+
+    /**
+    Return the existance state of the ball
+    */
     bool getExists() { return exists; }
+
+    /**
+    Set the existance state of the ball
+    */
     void setExisits(bool _exists) { exists = _exists; }
-    bool getJustDied() { return justDied; }
+
 
 private:
     int sampleRate{ 48000 };
     float timeStep{ 1.0f / 48000.0f };
-    float time{ 0.0f };
     float xVelocity{ 1.0f };
     float yVelocity{ -1.0f };
     float xPosition{ 1.0f };
     float yPosition{ 0.5f };
-    float frictionY{ 0.001f };
-    float frictionX{ 0.001f };
+    float frictionY{ 0.0f };
+    float frictionX{ 0.0f };
     float maxVelocityX{ 10.0f };
     float maxVelocityY{ 10.0f };
-    float accelerationX{ 0.01f };
-    float accelerationY{ -9.81f };
-    float lossX{ 0.01f };
-    float lossY{ 0.01f };
+    float accelerationX{ 0.0f };
+    float accelerationY{ 0.0f };
+    float lossX{ 0.00f };
+    float lossY{ 0.00f };
+    float massLoss{ 0.0 };
     float centreOfGravityX{ 0.5f };
-    float centreOfGravityY{ 0.5f };
+    float centreOfGravityY{ 0.0f };
     float mass{ 1.0f };
     bool exists{ false };
     bool baseBall{ true };
-    float xVelocityPrev{ 1.0f };
-    float yVelocityPrev{ -1.0f };
-    int zeroVelocityCount{ 0 };
     bool triggerY{ false };
     bool triggerX{ false };
     int triggerYCount{ 0 };
+    float kineticEnergyBoundary{ 0.01 };
 
-    float massLoss{ 0.1 };
-    float massLowerBoundary{ 0.01 };
-    bool justDied = false;
 };

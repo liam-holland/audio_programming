@@ -9,7 +9,6 @@
 
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
-#include "BallSample.h"
 
 //==============================================================================
 Assignment_3AudioProcessor::Assignment_3AudioProcessor()
@@ -28,6 +27,10 @@ Assignment_3AudioProcessor::Assignment_3AudioProcessor()
 
     // Load the binary of a file into the sampleBuffer
     //fileLoader.loadIntoAudioBuffer( BinaryData::Cath_short_clip_wav, BinaryData::Cath_short_clip_wavSize, sampleBuffer);
+
+    // Allow 3 base balls and 64 splash balls
+    baseBalls.resize(3);
+    splashBalls.resize(64);
     
     // Set up pointers to all the parameter values
     reverbSlider = parameters.getRawParameterValue( "reverb_wet" );
@@ -37,32 +40,37 @@ Assignment_3AudioProcessor::Assignment_3AudioProcessor()
     granulatorMix = parameters.getRawParameterValue("gran_mix");
     ballVolume = parameters.getRawParameterValue("ball_volume");
     panWidth = parameters.getRawParameterValue("pan_width");
-
     centreOfGravityX = parameters.getRawParameterValue("centre_of_gravity_x");
     centreOfGravityY = parameters.getRawParameterValue("centre_of_gravity_y");
-
     ballXAcceleration = parameters.getRawParameterValue("x_acceleration");
     ballYAcceleration = parameters.getRawParameterValue("y_acceleration");
     ballMass = parameters.getRawParameterValue("ball_mass");
     ballXLoss = parameters.getRawParameterValue("ball_X_loss");
     ballYLoss = parameters.getRawParameterValue("ball_Y_loss");
+    ballMassLoss = parameters.getRawParameterValue("ball_mass_loss");
     ballXStartVelocity = parameters.getRawParameterValue("x_initial_velocity");
     ballYStartVelocity = parameters.getRawParameterValue("y_initial_velocity");
     ballXStartPosition = parameters.getRawParameterValue("x_initial_position");
 
-    // Listen to the parameters of the ball
+    // Listen to the parameters of the balls
     parameters.addParameterListener( "ball_menu", this );
     parameters.addParameterListener( "lock_state", this);
     parameters.addParameterListener("x_initial_velocity", this);
     parameters.addParameterListener("y_initial_velocity", this);
     parameters.addParameterListener("x_initial_position", this);
     parameters.addParameterListener("ball_mass", this);
+    parameters.addParameterListener("ball_mass_loss", this);
     parameters.addParameterListener("centre_of_gravity_x", this);
     parameters.addParameterListener("centre_of_gravity_y", this);
     parameters.addParameterListener("ball_X_loss", this);
     parameters.addParameterListener("ball_Y_loss", this);
     parameters.addParameterListener("x_acceleration", this);
     parameters.addParameterListener("y_acceleration", this);
+
+    // Listen to the ball toggles
+    parameters.addParameterListener("ballToggle_1", this);
+    parameters.addParameterListener("ballToggle_2", this);
+    parameters.addParameterListener("ballToggle_3", this);
 
 
     lockStateBool = false; // Ensure lock is off for init
@@ -84,6 +92,9 @@ Assignment_3AudioProcessor::~Assignment_3AudioProcessor()
 {
 }
 
+/**
+Save the settings of the current menu selection to a slot so that we can recall it later
+*/
 void Assignment_3AudioProcessor::saveCurrentSettingsToSlot(int ballIndex)
 {
     // Check that the ball index is within the 1-3 limit or the lock state has been set to true
@@ -101,14 +112,15 @@ void Assignment_3AudioProcessor::saveCurrentSettingsToSlot(int ballIndex)
     s.gravityYChoice = (int)*parameters.getRawParameterValue("centre_of_gravity_y");
     s.xLoss = *parameters.getRawParameterValue("ball_X_loss");
     s.yLoss = *parameters.getRawParameterValue("ball_Y_loss");
+    s.massLoss = *parameters.getRawParameterValue("ball_mass_loss");
     s.xAcceleration = *parameters.getRawParameterValue("x_acceleration");
     s.yAcceleration = *parameters.getRawParameterValue("y_acceleration");
 
-    // Also save the specific toggle for this ball
-    juce::String toggleID = "ball_" + juce::String(ballIndex + 1) + "_toggle";
-    s.isActive = *parameters.getRawParameterValue(toggleID) > 0.5f;
 }
 
+/**
+Load the current menu settings from a slot
+*/
 void Assignment_3AudioProcessor::loadSettingsFromSlot(int ballIndex)
 {
     if (ballIndex < 0 || ballIndex > 2 ) return;
@@ -128,6 +140,7 @@ void Assignment_3AudioProcessor::loadSettingsFromSlot(int ballIndex)
     if (lockState()) {
         parameters.getParameter("ball_X_loss")->setValueNotifyingHost(parameters.getParameterRange("ball_X_loss").convertTo0to1(0.0f));
         parameters.getParameter("ball_Y_loss")->setValueNotifyingHost(parameters.getParameterRange("ball_Y_loss").convertTo0to1(0.0f));
+        parameters.getParameter("ball_mass_loss")->setValueNotifyingHost(parameters.getParameterRange("ball_mass_loss").convertTo0to1(0.0f));
         parameters.getParameter("x_acceleration")->setValueNotifyingHost(parameters.getParameterRange("x_acceleration").convertTo0to1(0.0f));
         parameters.getParameter("y_acceleration")->setValueNotifyingHost(parameters.getParameterRange("y_acceleration").convertTo0to1(0.0f));
     }
@@ -135,25 +148,22 @@ void Assignment_3AudioProcessor::loadSettingsFromSlot(int ballIndex)
     {
         parameters.getParameter("ball_X_loss")->setValueNotifyingHost(parameters.getParameterRange("ball_X_loss").convertTo0to1(s.xLoss));
         parameters.getParameter("ball_Y_loss")->setValueNotifyingHost(parameters.getParameterRange("ball_Y_loss").convertTo0to1(s.yLoss));
+        parameters.getParameter("ball_mass_loss")->setValueNotifyingHost(parameters.getParameterRange("ball_mass_loss").convertTo0to1(s.yLoss));
         parameters.getParameter("x_acceleration")->setValueNotifyingHost(parameters.getParameterRange("x_acceleration").convertTo0to1(s.xAcceleration));
         parameters.getParameter("y_acceleration")->setValueNotifyingHost(parameters.getParameterRange("y_acceleration").convertTo0to1(s.yAcceleration));
     }
 
-   
-
     isUpdatingFromInternalSource = false;
 }
 
+/**
+Prepare variables before playback
+*/
 void Assignment_3AudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
 
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
-
-    //Max number of balls
-    int numberofBalls{ 32 };
-    baseBalls.resize(3);
-    splashBalls.resize(64);
 
     // Prepare all the balls, but don't set any to exist
     for (auto& b : baseBalls)
@@ -190,35 +200,64 @@ void Assignment_3AudioProcessor::prepareToPlay(double sampleRate, int samplesPer
 
 }
 
+/**
+Borrow the function from the parameter tree state class
+It listens to the parameters to see if they have been changed
+*/
 void Assignment_3AudioProcessor::parameterChanged(const juce::String& parameterID, float newValue)
 {
-
-    // If WE are the ones moving the sliders in code, don't trigger the save/load logic!
     if (isUpdatingFromInternalSource) return;
 
     if (parameterID == "ball_menu")
     {
         int newBallIndex = juce::roundToInt(newValue);
-
-        // Save current ball before switching
         saveCurrentSettingsToSlot(lastSelectedBall);
-
         lastSelectedBall = newBallIndex;
 
-        // To prevent audio glitches I need to use the message manager, it expects a lambda function
-
-        // I need to tell the lambda function that it needs to look within this class and it can use newBallIndex
         juce::MessageManager::callAsync([this, newBallIndex] {
             loadSettingsFromSlot(newBallIndex);
             });
     }
+
+    
+    else if (parameterID.startsWith("ballToggle_"))
+    {
+
+        int ballIndex = parameterID.getTrailingIntValue() - 1; // Converts "ball_1_toggle" to index 0
+
+        if (newValue > 0.5f) // Toggle turned ON
+        {
+            // Only create if it doesn't already exist
+            if (!baseBalls[ballIndex].getExists())
+            {
+                baseBalls[ballIndex].create();
+                baseBalls[ballIndex].setBallType("base");
+
+                // Set initial state from the CURRENT slider values
+                baseBalls[ballIndex].setAcceleration(*ballXAcceleration, *ballYAcceleration);
+                baseBalls[ballIndex].setLoss(*ballXLoss, *ballYLoss);
+                baseBalls[ballIndex].setMass(*ballMass);
+                baseBalls[ballIndex].setStartPosition(*ballXStartPosition, 0.5f);
+                baseBalls[ballIndex].setStartVelocity(*ballXStartVelocity, *ballYStartVelocity);
+            }
+        }
+
+        else // Toggle turned OFF
+        {
+            baseBalls[ballIndex].setExisits(false);
+        }
+    }
+    // ------------------------
     else if (parameterID == "lock_state")
     {
         juce::MessageManager::callAsync([this] {
             loadSettingsFromSlot(lastSelectedBall);
             });
     }
-    else
+
+    else if (parameterID.startsWith("x_")
+        || parameterID.startsWith("y_")
+        || parameterID.startsWith("ball_"))
     {
         saveCurrentSettingsToSlot(lastSelectedBall);
     }
@@ -243,6 +282,7 @@ void Assignment_3AudioProcessor::loadAudioFile(const juce::File& file)
     //juce::Logger::writeToLog("File selected: " + file.getFullPathName());
 }
 
+// What to do when the ball menu is changed
 int Assignment_3AudioProcessor::ballMenuSelection()
 {
     // Use load for safety
@@ -250,12 +290,14 @@ int Assignment_3AudioProcessor::ballMenuSelection()
     return selectedBallIndex;
 }
 
+// Floor or ceiling button clicked
 int Assignment_3AudioProcessor::floorOrCeiling()
 {
     int selectedFloorOrCeiling = juce::roundToInt(parameters.getRawParameterValue("centre_of_gravity_y")->load());
     return selectedFloorOrCeiling;
 }
 
+// Reset the parameters to their defualt values
 void Assignment_3AudioProcessor::resetParametersToDefault()
 {
     // get the parameters directly from the processor
@@ -290,6 +332,7 @@ void Assignment_3AudioProcessor::assignGrain(Ball::BallState _state, std::vector
     }
 }
 
+// Spawn the splashes if the parent state is a base ball
 void Assignment_3AudioProcessor::spawnSplashes(Ball::BallState parentState)
 {
     int spawnedCount = 0;
@@ -309,14 +352,14 @@ void Assignment_3AudioProcessor::spawnSplashes(Ball::BallState parentState)
         // If a ball doesn't exist
         if (!potentialSlot.getExists())
         {
-            DBG("Splash Spawned! Parent Y Vel: " + juce::String(parentState.yVelocity));
 
             // Create splash balls, that come off from the main ball
             potentialSlot.create();
             potentialSlot.setBallType("splash");
             potentialSlot.setStartPosition( parentState.xPosition, splashOrRain );
-            potentialSlot.setMass(  parentState.mass*0.3f + ((random.nextFloat() - 0.5) / 5.0f) );
+            potentialSlot.setMass(  parentState.mass * 0.3f + ((random.nextFloat() - 0.5) / 5.0f) );
             potentialSlot.setLoss(0.1f, 0.1f);
+            potentialSlot.setMassLoss(0.1f);
 
             // Splash grain will always go down to the floor, regardless if they hit the floor or celing
             potentialSlot.setAcceleration( parentState.xAcceleration, -(std::abs(parentState.yAcceleration)));
@@ -324,9 +367,6 @@ void Assignment_3AudioProcessor::spawnSplashes(Ball::BallState parentState)
             // Vary the velocity of x and y
             float vXVar = (random.nextFloat() - 0.5f) * 2.0f;
             float vYVar = (random.nextFloat()) * std::abs(parentState.yVelocity);
-
-            // Make sure the ball is always moving in the opposite direction to the hit
-            float splashOrRain = ((parentState.yPosition < 0.5) ? 0.001f : 0.99f);
 
             // Set the velocity of the balls
             potentialSlot.setStartVelocity( parentState.xVelocity + vXVar, (std::abs(parentState.yVelocity)*directionToLeave) + vYVar);
@@ -342,13 +382,14 @@ void Assignment_3AudioProcessor::spawnSplashes(Ball::BallState parentState)
         }
     }
 
-    // IF WE GET HERE, it means the loop finished without finding enough slots
+    // IF we get here, it means the loop finished without finding enough slots
     if (spawnedCount < maxToSpawn)
     {
         DBG("POOL FULL: Only spawned " + juce::String(spawnedCount) + " out of " + juce::String(maxToSpawn));
     }
 }
 
+// Return the lock state of the button
 bool Assignment_3AudioProcessor::lockState()
 {
     bool lockState = *parameters.getRawParameterValue("lock_state") > 0.5f;
@@ -366,6 +407,9 @@ void Assignment_3AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
         buffer.clear();
         return;
     }
+
+    // Get the lock state
+    bool locked = lockState();
 
     juce::ScopedNoDenormals noDenormals;
     auto totalNumInputChannels = getTotalNumInputChannels();
@@ -396,9 +440,9 @@ void Assignment_3AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
     int numSamples{ buffer.getNumSamples() };
 
     // Get the values from the toggle boxes
-    bool isBall1Active = *parameters.getRawParameterValue("ball_1_toggle") > 0.5f;
-    bool isBall2Active = *parameters.getRawParameterValue("ball_2_toggle") > 0.5f;
-    bool isBall3Active = *parameters.getRawParameterValue("ball_3_toggle") > 0.5f;
+    bool isBall1Active = *parameters.getRawParameterValue("ballToggle_1") > 0.5f;
+    bool isBall2Active = *parameters.getRawParameterValue("ballToggle_2") > 0.5f;
+    bool isBall3Active = *parameters.getRawParameterValue("ballToggle_3") > 0.5f;
     bool backwards = *parameters.getRawParameterValue("backwards_toggle") > 0.5f;
     int muteBalls = (*parameters.getRawParameterValue("mute_balls") > 0.5f) ? 0 : 1;
 
@@ -408,25 +452,12 @@ void Assignment_3AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
     // Get the current value selected in the ball menu
     int ballSelected = ballMenuSelection();
 
-    // If the ball has been marked as active, but doesn't exist, then we create it using the user defined variables
-    if (!baseBalls[ballSelected].getExists() && !baseBalls[ballSelected].getJustDied())
-    {
-        baseBalls[ballSelected].create();
-        baseBalls[ballSelected].setBallType("base");
-        baseBalls[ballSelected].setAcceleration(*ballXAcceleration, *ballYAcceleration);
-        baseBalls[ballSelected].setLoss(*ballXLoss, *ballYLoss);
-        baseBalls[ballSelected].setMass(*ballMass);
-        baseBalls[ballSelected].setStartPosition(*ballXStartPosition, 0.5f);
-        baseBalls[ballSelected].setStartVelocity(*ballXStartVelocity, *ballYStartVelocity);
-    }
-
     // Loop through all the base balls
     for (int i = 0; i < 3; i++)
     {
         // Create and delete 
-
         // If the ball has been marked as in active and exisits, then we set the ball to not exists
-        if (!ballActive[i] && baseBalls[i].getExists())
+        if ( !ballActive[i] && baseBalls[i].getExists() )
         {
             baseBalls[i].setExisits(false);
         }
@@ -434,14 +465,22 @@ void Assignment_3AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
         // If the ball exists, then we are able to manipulate the values of the ball at the start of each buffer
         else if (baseBalls[i].getExists())
         {
-            if ( !lockState() )
+            // If the toggle was turned off elsewhere, kill the ball
+            bool isToggleOn = *parameters.getRawParameterValue("ballToggle_" + juce::String(i + 1)) > 0.5f;
+            if (!isToggleOn) {
+                baseBalls[i].setExisits(false);
+                continue;
+            }
+
+
+            if ( !locked )
             {
                 baseBalls[i].setAcceleration(*ballXAcceleration, *ballYAcceleration);
                 baseBalls[i].setLoss(*ballXLoss, *ballYLoss);
+                baseBalls[i].setMassLoss(*ballMassLoss);
             }
 
-            // Mass and Gravity should always update from the sliders!
-            //baseBalls[i].setMass(*ballMass);
+            // Gravity should always update from the sliders!
             baseBalls[i].setCentreOfGravity(*centreOfGravityX, floorOrCeiling());
         }
     }
@@ -496,21 +535,41 @@ void Assignment_3AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
     // New LOOP, take outside of inuvidial sample by sample loop
     // otherwise it will cause audio glitches
 
+    int integer = 0;
+
     // For each baseBall,
     for (auto& b : baseBalls)
     {
+
         // Check if the ball exists
         if (b.getExists())
         {
             
-            if (lockState())
+            if (locked)
             {
                 b.setAcceleration(0.0f, 0.0f);
                 b.setLoss(0.0f, 0.0f);
+                b.setMassLoss(0.0f);
             }
 
             // If it exists, proccess the movement of that ball
             b.processMovement( numSamples );
+
+            // If the ball just died during that movement
+            if (!b.getExists())
+            {
+                // We need to update the parameter to uncheck the box in the UI
+                juce::String toggleID = "ballToggle_" + juce::String(integer + 1);
+
+                if (auto* param = parameters.getParameter(toggleID))
+                {
+                    // This updates the APVTS, which updates the UI ToggleButton
+                    // and triggers parameterChanged
+                    param->setValueNotifyingHost(0.0f);
+                }
+
+                continue; // Move to the next ball
+            }
 
             // Get the state of that ball
             Ball::BallState state = b.getState();
@@ -533,7 +592,12 @@ void Assignment_3AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
 
             }
         }
+        // Next ball
+        integer++;
     }
+
+    //Reset integer
+    integer = 0;
 
     // For each splashBall
     for (auto& b : splashBalls)
@@ -542,10 +606,11 @@ void Assignment_3AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
         if (b.getExists())
         {
 
-            if (lockState())
+            if (locked)
             {
                 b.setAcceleration(0.0f, 0.0f);
                 b.setLoss(0.0f, 0.0f);
+                b.setMassLoss(0.0f);
             }
 
             // If it exists, proccess the movement of that ball
@@ -553,8 +618,6 @@ void Assignment_3AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
 
             // Get the state of that ball
             Ball::BallState state = b.getState();
-
-            DBG(state.yPosition);
 
             // If the ball has hit the floor or ceiling
             if (state.triggerY)
@@ -632,8 +695,6 @@ void Assignment_3AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
     }
     
 }
-
-
 
 //==============================================================================
 const juce::String Assignment_3AudioProcessor::getName() const

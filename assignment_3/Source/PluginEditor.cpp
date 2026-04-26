@@ -19,22 +19,6 @@ Assignment_3AudioProcessorEditor::Assignment_3AudioProcessorEditor (Assignment_3
     genericEditor = std::make_unique<juce::GenericAudioProcessorEditor>(p);
     addAndMakeVisible( *genericEditor );
 
-    // Register the basic formats
-    formatManager.registerBasicFormats();
-
-    // Create attachments to the balls
-    ball1Attachment = std::make_unique< juce::AudioProcessorValueTreeState::ButtonAttachment>(audioProcessor.parameters, "ball_1_toggle", Ball1);
-    ball2Attachment = std::make_unique< juce::AudioProcessorValueTreeState::ButtonAttachment>(audioProcessor.parameters, "ball_2_toggle", Ball2);
-    ball3Attachment = std::make_unique< juce::AudioProcessorValueTreeState::ButtonAttachment>(audioProcessor.parameters, "ball_3_toggle", Ball3);
-    backwardsAttachment = std::make_unique< juce::AudioProcessorValueTreeState::ButtonAttachment>(audioProcessor.parameters, "backwards_toggle", backwardsButton);
-    ballMuteAttachment = std::make_unique< juce::AudioProcessorValueTreeState::ButtonAttachment>(audioProcessor.parameters, "mute_balls", ballMute);
-    lockStateAttachment = std::make_unique< juce::AudioProcessorValueTreeState::ButtonAttachment>(audioProcessor.parameters, "lock_state", lockButton);
-
-    // Choose ball
-    ballMenu.setText("Choose ball", true);
-    addAndMakeVisible(ballMenu);
-    ballMenuAttachment = std::make_unique< juce::AudioProcessorValueTreeState::ComboBoxAttachment>( audioProcessor.parameters, "ball_menu", ballMenu);
-
     // Set up the button
     loadButton.setButtonText("Load Audio File...");
     addAndMakeVisible(loadButton);
