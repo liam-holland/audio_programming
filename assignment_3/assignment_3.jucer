@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <JUCERPROJECT id="izRqC1" name="assignment_3" projectType="audioplug" useAppConfig="0"
-              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1">
+              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" pluginName="Granular Sampler - Ball Simulation"
+              pluginManufacturer="Ball Co." pluginDesc="A granular sampler which chooses the grains based off the physics off ball simulations">
   <MAINGROUP id="mneCbL" name="assignment_3">
     <GROUP id="{36EC3B0B-22EE-4237-6F6C-F9AB6B8F7068}" name="Source">
       <FILE id="OxD1g7" name="Grain.h" compile="0" resource="0" file="Source/Grain.h"/>
@@ -38,7 +39,6 @@
       <FILE id="Bhdt7e" name="PluginEditor.cpp" compile="1" resource="0"
             file="Source/PluginEditor.cpp"/>
       <FILE id="e95uz3" name="PluginEditor.h" compile="0" resource="0" file="Source/PluginEditor.h"/>
-      <FILE id="m6henb" name="BallSample.h" compile="0" resource="0" file="Source/BallSample.h"/>
     </GROUP>
   </MAINGROUP>
   <MODULES>
