@@ -29,8 +29,7 @@ Assignment_3AudioProcessorEditor::Assignment_3AudioProcessorEditor (Assignment_3
         loadButtonClicked(); 
     };
 
-    // Make sure that before the constructor has finished, you've set the
-    // editor's size to whatever you need it to be.
+    // Do not remove this!
     setSize (400, 800);
 
 }

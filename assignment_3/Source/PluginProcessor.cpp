@@ -26,7 +26,8 @@ Assignment_3AudioProcessor::Assignment_3AudioProcessor()
 {
 
     // Load the binary of a file into the sampleBuffer
-    //fileLoader.loadIntoAudioBuffer( BinaryData::Cath_short_clip_wav, BinaryData::Cath_short_clip_wavSize, sampleBuffer);
+    
+    // fileLoader.loadIntoAudioBuffer( BinaryData::Cath_short_clip_wav, BinaryData::Cath_short_clip_wavSize, sampleBuffer);
 
     // Allow 3 base balls and 64 splash balls
     baseBalls.resize(3);
@@ -71,6 +72,9 @@ Assignment_3AudioProcessor::Assignment_3AudioProcessor()
     parameters.addParameterListener("ballToggle_1", this);
     parameters.addParameterListener("ballToggle_2", this);
     parameters.addParameterListener("ballToggle_3", this);
+
+    // Listen to load internal
+    parameters.addParameterListener("load_internal_sample", this);
 
 
     lockStateBool = false; // Ensure lock is off for init
@@ -219,6 +223,22 @@ void Assignment_3AudioProcessor::parameterChanged(const juce::String& parameterI
             });
     }
 
+    if (parameterID == "load_internal_sample")
+    {
+
+        int loadInternal = juce::roundToInt(newValue);
+        DBG(loadInternal);
+        if (newValue == 1)
+        {
+            fileLoader.loadIntoAudioBuffer(BinaryData::Cath_short_clip_wav, BinaryData::Cath_short_clip_wavSize, sampleBuffer);
+            sampleBufferSamples = sampleBuffer.getNumSamples();
+        }
+
+        else if (newValue == 0)
+        {
+            sampleBuffer.clear();
+        }
+    }
     
     else if (parameterID.startsWith("ballToggle_"))
     {
@@ -279,7 +299,6 @@ void Assignment_3AudioProcessor::loadAudioFile(const juce::File& file)
     // Tell the audio thread it's safe to come back
     isLoading = false;
 
-    //juce::Logger::writeToLog("File selected: " + file.getFullPathName());
 }
 
 // What to do when the ball menu is changed

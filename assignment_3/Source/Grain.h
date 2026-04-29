@@ -108,7 +108,7 @@ public:
         ballXVelocityMax = state.xMaxVelocity;
         ballYVelocityMax = state.yMaxVelocity;
         ballYVelocity = state.yVelocity;
-        pan = juce::jmap(state.xPosition, 0.0f, 1.0f, -1.0f, 1.0f);
+        pan = juce::jmap(state.yPosition, 0.0f, 1.0f, -1.0f, 1.0f);
 
         setPanSmoothed();
 

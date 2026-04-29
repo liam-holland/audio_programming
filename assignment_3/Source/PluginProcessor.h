@@ -110,8 +110,8 @@ private:
     juce::AudioProcessorValueTreeState::ParameterLayout createParameters()
     {
         return{
-
-                 std::make_unique<juce::AudioParameterBool>(juce::ParameterID("mute_balls", 1), "Mute Balls", false)
+                 std::make_unique<juce::AudioParameterBool>(juce::ParameterID("load_internal_sample", 1), "Load Internal Sample", false)
+                ,std::make_unique<juce::AudioParameterBool>(juce::ParameterID("mute_balls", 1), "Mute Balls", false)
                 ,std::make_unique<juce::AudioParameterBool>(juce::ParameterID("ballToggle_1", 1), "Ball 1 State", false)
                 ,std::make_unique<juce::AudioParameterBool>(juce::ParameterID("ballToggle_2", 1), "Ball 2 State", false)
                 ,std::make_unique<juce::AudioParameterBool>(juce::ParameterID("ballToggle_3", 1), "Ball 3 State", false)
