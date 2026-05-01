@@ -111,6 +111,7 @@ private:
     {
         return{
                  std::make_unique<juce::AudioParameterBool>(juce::ParameterID("load_internal_sample", 1), "Load Internal Sample", false)
+                ,std::make_unique<juce::AudioParameterBool>(juce::ParameterID("clear_all_samples", 1), "Clear Samples + Balls", false)
                 ,std::make_unique<juce::AudioParameterBool>(juce::ParameterID("mute_balls", 1), "Mute Balls", false)
                 ,std::make_unique<juce::AudioParameterBool>(juce::ParameterID("ballToggle_1", 1), "Ball 1 State", false)
                 ,std::make_unique<juce::AudioParameterBool>(juce::ParameterID("ballToggle_2", 1), "Ball 2 State", false)
@@ -137,13 +138,13 @@ private:
 
                 ,std::make_unique<juce::AudioParameterFloat>("divider3", "=== GRAIN PARAMETERS ===", 0.0f, 100.0f, 0.0f)
 
-                ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("ball_volume", 1), "Ball Grain Volume", 0.0f, 20.0f, 2.0f)
+                ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("ball_volume", 1), "Ball Grain Volume", 0.0f, 20.0f, 15.0f)
                 ,std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("gran_mix", 1), "Granulator Mix", 0.0f, 1.0f, 0.5f)
                 ,std::make_unique<juce::AudioParameterBool>(juce::ParameterID("backwards_toggle", 1), "Play Backwards", false )
-                ,std::make_unique <juce::AudioParameterFloat>(juce::ParameterID("reverb_wet",1),"Reverb Wet/Dry", 0.0f, 0.9f, 0.5f)
+                ,std::make_unique <juce::AudioParameterFloat>(juce::ParameterID("reverb_wet",1),"Reverb Wet/Dry", 0.0f, 0.9f, 0.0f)
                 ,std::make_unique <juce::AudioParameterFloat>(juce::ParameterID("pan_width",1),"Pan Width", 0.0f, 1.0f, 0.2f)
-                ,std::make_unique <juce::AudioParameterInt>(juce::ParameterID("splash",1),"Number of Splash Paricles", 0, 8, 3)
-                ,std::make_unique <juce::AudioParameterFloat>(juce::ParameterID("grain_size_perc",1),"Grain Size %", 0.001f, 0.90f, 0.01f)
+                ,std::make_unique <juce::AudioParameterInt>(juce::ParameterID("splash",1),"Number of Splash Paricles", 0, 8, 2)
+                ,std::make_unique <juce::AudioParameterFloat>(juce::ParameterID("grain_size_perc",1),"Grain Size %", 0.001f, 0.90f, 0.04f)
                 ,std::make_unique <juce::AudioParameterFloat>(juce::ParameterID("grain_deviation_perc",1),"Grain Size Deviation %", 0.00f, 0.50f, 0.1f)
                 
     

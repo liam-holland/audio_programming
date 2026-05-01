@@ -14,7 +14,9 @@
 Creates a ball object.
 The ball moves between a 4 walled square. The dimensions of the square is 1.0 x 1.0 (x,y)
 If the ball hits a wall, it will bounce.
-The user can choose the loss and friction the ball encounters when it hits a surface
+The user can choose the loss and friction the ball encounters when it hits a surface..
+The user can also choose the starting position, starting velocity.
+The acceleration in the x and y direction can be modifed in real time
 */
 class Ball
 {

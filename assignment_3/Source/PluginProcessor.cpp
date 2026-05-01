@@ -5,6 +5,7 @@
 
   ==============================================================================
 */
+
 #include <random>
 
 #include "PluginProcessor.h"
@@ -75,9 +76,11 @@ Assignment_3AudioProcessor::Assignment_3AudioProcessor()
 
     // Listen to load internal
     parameters.addParameterListener("load_internal_sample", this);
+    parameters.addParameterListener("clear_all_samples", this);
 
 
     lockStateBool = false; // Ensure lock is off for init
+
     for (int i = 0; i < 3; ++i) {
         saveCurrentSettingsToSlot(i);
     }
@@ -102,10 +105,13 @@ Save the settings of the current menu selection to a slot so that we can recall 
 void Assignment_3AudioProcessor::saveCurrentSettingsToSlot(int ballIndex)
 {
     // Check that the ball index is within the 1-3 limit or the lock state has been set to true
+    //bool check = (ballIndex < 0 || ballIndex > 2 || !lockState() || isUpdatingFromInternalSource);
+
     if (ballIndex < 0 || ballIndex > 2 || lockState() || isUpdatingFromInternalSource) return;
 
     // Create a reference to the saved ball settings
     auto& s = savedBallSettings[ballIndex];
+
 
     // Read the current values from the APVTS and update the reference
     s.xInitialVelocity = *parameters.getRawParameterValue("x_initial_velocity");
@@ -120,6 +126,10 @@ void Assignment_3AudioProcessor::saveCurrentSettingsToSlot(int ballIndex)
     s.xAcceleration = *parameters.getRawParameterValue("x_acceleration");
     s.yAcceleration = *parameters.getRawParameterValue("y_acceleration");
 
+    DBG(s.xInitialVelocity);
+    DBG(s.yInitialVelocity);
+    DBG(s.xInitialPosition);
+
 }
 
 /**
@@ -131,6 +141,9 @@ void Assignment_3AudioProcessor::loadSettingsFromSlot(int ballIndex)
 
     auto& s = savedBallSettings[ballIndex];
     isUpdatingFromInternalSource = true; // Prevent the "save" logic from triggering
+
+    //DBG(s.xInitialPosition);
+    //DBG(s.yInitialPosition);
 
     // Push values back to the parameters (this updates the GUI Sliders)
     parameters.getParameter("x_initial_velocity")->setValueNotifyingHost(parameters.getParameterRange("x_initial_velocity").convertTo0to1(s.xInitialVelocity));
@@ -148,6 +161,7 @@ void Assignment_3AudioProcessor::loadSettingsFromSlot(int ballIndex)
         parameters.getParameter("x_acceleration")->setValueNotifyingHost(parameters.getParameterRange("x_acceleration").convertTo0to1(0.0f));
         parameters.getParameter("y_acceleration")->setValueNotifyingHost(parameters.getParameterRange("y_acceleration").convertTo0to1(0.0f));
     }
+    // If the lock state has not been pressed, load the settings from the slot
     else if (!lockState())
     {
         parameters.getParameter("ball_X_loss")->setValueNotifyingHost(parameters.getParameterRange("ball_X_loss").convertTo0to1(s.xLoss));
@@ -212,22 +226,24 @@ void Assignment_3AudioProcessor::parameterChanged(const juce::String& parameterI
 {
     if (isUpdatingFromInternalSource) return;
 
+    // Check for the ball menu slection. Then update the ball GUI and internal values to those that have been saved
     if (parameterID == "ball_menu")
     {
         int newBallIndex = juce::roundToInt(newValue);
+
         saveCurrentSettingsToSlot(lastSelectedBall);
         lastSelectedBall = newBallIndex;
 
-        juce::MessageManager::callAsync([this, newBallIndex] {
+         juce::MessageManager::callAsync([this, newBallIndex] {
             loadSettingsFromSlot(newBallIndex);
             });
     }
 
+    // Load the internal sample. A woman singing
     if (parameterID == "load_internal_sample")
     {
 
         int loadInternal = juce::roundToInt(newValue);
-        DBG(loadInternal);
         if (newValue == 1)
         {
             fileLoader.loadIntoAudioBuffer(BinaryData::Cath_short_clip_wav, BinaryData::Cath_short_clip_wavSize, sampleBuffer);
@@ -240,6 +256,36 @@ void Assignment_3AudioProcessor::parameterChanged(const juce::String& parameterI
         }
     }
     
+    // Clear all the samples, reset balls back to defualts
+    if (parameterID == "clear_all_samples")
+    {
+
+        int clearSamples = juce::roundToInt(newValue);
+
+        if (newValue == 1)
+        {
+            isUpdatingFromInternalSource = true;
+
+            sampleBuffer.clear();
+
+            
+            parameters.getParameter("load_internal_sample")->setValueNotifyingHost(parameters.getParameterRange("load_internal_sample").convertTo0to1(0.0f));
+            parameters.getParameter("ballToggle_1")->setValueNotifyingHost(parameters.getParameterRange("ballToggle_1").convertTo0to1(0.0f));
+            parameters.getParameter("ballToggle_2")->setValueNotifyingHost(parameters.getParameterRange("ballToggle_2").convertTo0to1(0.0f));
+            parameters.getParameter("ballToggle_3")->setValueNotifyingHost(parameters.getParameterRange("ballToggle_3").convertTo0to1(0.0f));
+            resetParametersToDefault();
+
+            parameters.getParameter("clear_all_samples")->setValueNotifyingHost(parameters.getParameterRange("clear_all_samples").convertTo0to1(0.0f));
+
+            isUpdatingFromInternalSource = false;
+        }
+
+        
+
+    }
+    
+
+    // Look for the ball toggle switches. If it is turned on, then create a ball with the current parameters
     else if (parameterID.startsWith("ballToggle_"))
     {
 
@@ -267,20 +313,21 @@ void Assignment_3AudioProcessor::parameterChanged(const juce::String& parameterI
             baseBalls[ballIndex].setExisits(false);
         }
     }
-    // ------------------------
-    else if (parameterID == "lock_state")
-    {
-        juce::MessageManager::callAsync([this] {
-            loadSettingsFromSlot(lastSelectedBall);
-            });
-    }
 
-    else if (parameterID.startsWith("x_")
-        || parameterID.startsWith("y_")
-        || parameterID.startsWith("ball_"))
-    {
-        saveCurrentSettingsToSlot(lastSelectedBall);
-    }
+    // ------------------------
+    //else if (parameterID == "lock_state")
+    //{
+    //    juce::MessageManager::callAsync([this] {
+    //        loadSettingsFromSlot(lastSelectedBall);
+    //        });
+    //}
+
+    //else if (parameterID.startsWith("x_a")
+    //    || parameterID.startsWith("y_a")
+    //    || parameterID.startsWith("ball_"))
+    //{
+    //    saveCurrentSettingsToSlot(lastSelectedBall);
+    //}
 }
 
 // Create a function that will load the audio files when called
@@ -491,7 +538,7 @@ void Assignment_3AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
                 continue;
             }
 
-
+            // If the ball is not locked, update the acceleration of the ball once per sample buffer cycle
             if ( !locked )
             {
                 baseBalls[i].setAcceleration(*ballXAcceleration, *ballYAcceleration);
